@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_sync_settings: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          id: string
+          is_enabled: boolean
+          last_sync: string | null
+          provider: string
+          refresh_token: string | null
+          settings: Json | null
+          sync_direction: string
+          sync_frequency_minutes: number | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          last_sync?: string | null
+          provider: string
+          refresh_token?: string | null
+          settings?: Json | null
+          sync_direction?: string
+          sync_frequency_minutes?: number | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          last_sync?: string | null
+          provider?: string
+          refresh_token?: string | null
+          settings?: Json | null
+          sync_direction?: string
+          sync_frequency_minutes?: number | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      calendar_webhooks: {
+        Row: {
+          created_at: string
+          expiration: string | null
+          id: string
+          is_active: boolean
+          provider: string
+          resource_id: string
+          user_id: string
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string
+          expiration?: string | null
+          id?: string
+          is_active?: boolean
+          provider: string
+          resource_id: string
+          user_id: string
+          webhook_url: string
+        }
+        Update: {
+          created_at?: string
+          expiration?: string | null
+          id?: string
+          is_active?: boolean
+          provider?: string
+          resource_id?: string
+          user_id?: string
+          webhook_url?: string
+        }
+        Relationships: []
+      }
       calendars: {
         Row: {
           color: string | null
@@ -54,8 +135,11 @@ export type Database = {
           description: string | null
           end_date: string
           event_type: string | null
+          external_id: string | null
+          external_source: string | null
           hospital_id: string | null
           id: string
+          last_synced: string | null
           location: string | null
           start_date: string
           status: string | null
@@ -70,8 +154,11 @@ export type Database = {
           description?: string | null
           end_date: string
           event_type?: string | null
+          external_id?: string | null
+          external_source?: string | null
           hospital_id?: string | null
           id?: string
+          last_synced?: string | null
           location?: string | null
           start_date: string
           status?: string | null
@@ -86,8 +173,11 @@ export type Database = {
           description?: string | null
           end_date?: string
           event_type?: string | null
+          external_id?: string | null
+          external_source?: string | null
           hospital_id?: string | null
           id?: string
+          last_synced?: string | null
           location?: string | null
           start_date?: string
           status?: string | null
@@ -240,6 +330,51 @@ export type Database = {
           phone?: string | null
           specialty?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sync_history: {
+        Row: {
+          completed_at: string | null
+          details: Json | null
+          error_message: string | null
+          events_failed: number | null
+          events_processed: number | null
+          events_succeeded: number | null
+          id: string
+          provider: string
+          started_at: string
+          sync_status: string
+          sync_type: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          events_failed?: number | null
+          events_processed?: number | null
+          events_succeeded?: number | null
+          id?: string
+          provider: string
+          started_at?: string
+          sync_status?: string
+          sync_type: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          events_failed?: number | null
+          events_processed?: number | null
+          events_succeeded?: number | null
+          id?: string
+          provider?: string
+          started_at?: string
+          sync_status?: string
+          sync_type?: string
           user_id?: string
         }
         Relationships: []
