@@ -129,8 +129,8 @@ export const CalendarSync: React.FC = () => {
     let icsContent = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MedicoAgenda//Calendar//PT\n';
     
     events.forEach(event => {
-      const startDate = new Date(event.start_time).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      const endDate = new Date(event.end_time).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const startDate = new Date(event.start_date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const endDate = new Date(event.end_date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
       
       icsContent += 'BEGIN:VEVENT\n';
       icsContent += `UID:${event.id}@medicoagenda.com\n`;
@@ -180,8 +180,8 @@ export const CalendarSync: React.FC = () => {
             await createEvent({
               title: eventData.title,
               description: eventData.description,
-              start_time: eventData.start_time,
-              end_time: eventData.end_time,
+              start_date: eventData.start_date,
+              end_date: eventData.end_date,
               location: eventData.location,
               event_type: eventData.event_type,
               status: eventData.status

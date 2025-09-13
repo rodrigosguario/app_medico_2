@@ -1,11 +1,26 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseSync } from './useSupabaseSync';
-import type { Database } from '@/integrations/supabase/types';
 
-type FinancialEvent = Database['public']['Tables']['financial_events']['Row'];
-type FinancialEventInsert = Database['public']['Tables']['financial_events']['Insert'];
-type FinancialEventUpdate = Database['public']['Tables']['financial_events']['Update'];
+// Temporary types until Supabase types are regenerated
+type FinancialEvent = {
+  id: string;
+  user_id: string;
+  event_id?: string;
+  title: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  date: string;
+  type: string; // Changed from 'income' | 'expense' to string for compatibility
+  category?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type FinancialEventInsert = Omit<FinancialEvent, 'id' | 'created_at' | 'updated_at'>;
+type FinancialEventUpdate = Partial<Omit<FinancialEvent, 'id' | 'user_id' | 'created_at' | 'updated_at'>>;
 
 export const useFinancialEvents = () => {
   const [financialEvents, setFinancialEvents] = useState<FinancialEvent[]>([]);

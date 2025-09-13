@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
 
-type Hospital = Database['public']['Tables']['hospitals']['Row'];
+// Temporary types until Supabase types are regenerated
+type Hospital = {
+  id: string;
+  name: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export const useHospitals = () => {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);

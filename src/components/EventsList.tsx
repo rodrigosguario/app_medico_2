@@ -4,8 +4,8 @@ import { Clock, MapPin, DollarSign, Calendar } from 'lucide-react';
 interface Event {
   id: string | number;
   title: string;
-  start_time: string;
-  end_time: string;
+  start_date: string;
+  end_date: string;
   event_type: string;
   status: string;
   value?: number | null;
@@ -113,7 +113,7 @@ const EventsList: React.FC<EventsListProps> = ({ events }) => {
                 <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>{formatDateTime(event.start_time)}</span>
+                    <span>{formatDateTime(event.start_date)}</span>
                   </div>
                   
                   {event.location && (

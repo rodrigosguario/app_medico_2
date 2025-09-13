@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthGuard';
-import type { Database } from '@/integrations/supabase/types';
 
-type Calendar = Database['public']['Tables']['calendars']['Row'];
-type CalendarInsert = Database['public']['Tables']['calendars']['Insert'];
-type CalendarUpdate = Database['public']['Tables']['calendars']['Update'];
+// Temporary types until Supabase types are regenerated
+type Calendar = {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type CalendarInsert = Omit<Calendar, 'id' | 'created_at' | 'updated_at'>;
+type CalendarUpdate = Partial<Omit<Calendar, 'id' | 'user_id' | 'created_at' | 'updated_at'>>;
 
 export const useCalendars = () => {
   const [calendars, setCalendars] = useState<Calendar[]>([]);
