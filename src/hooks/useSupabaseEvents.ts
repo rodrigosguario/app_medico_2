@@ -37,7 +37,7 @@ export const useSupabaseEvents = () => {
             hospitals(name, address)
           `)
           .eq('user_id', user.data.user.id)
-          .order('start_time', { ascending: true });
+          .order('start_date', { ascending: true });
 
         if (supabaseError) throw supabaseError;
 
