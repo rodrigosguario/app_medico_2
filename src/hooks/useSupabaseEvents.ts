@@ -33,7 +33,7 @@ export const useSupabaseEvents = () => {
           .from('events')
           .select(`
             *,
-            calendars(name, color, category),
+            calendars(name, color),
             hospitals(name, address)
           `)
           .eq('user_id', user.data.user.id)
@@ -99,7 +99,7 @@ export const useSupabaseEvents = () => {
           .insert([fullEventData])
           .select(`
             *,
-            calendars(name, color, category),
+            calendars(name, color),
             hospitals(name, address)
           `)
           .single();

@@ -66,7 +66,7 @@ export const useSupabaseDashboard = () => {
           .from('events')
           .select(`
             *,
-            calendars(name, color, category),
+            calendars(name, color),
             hospitals(name)
           `)
           .eq('user_id', userId)
