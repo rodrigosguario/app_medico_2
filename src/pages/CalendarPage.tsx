@@ -41,8 +41,8 @@ import { cn } from '@/lib/utils';
 interface CalendarEvent {
   id: string;
   title: string;
-  start_time: string;
-  end_time: string;
+  start_date: string;
+  end_date: string;
   event_type: string;
   status: string;
   value?: number | null;
@@ -144,8 +144,8 @@ const CalendarPage: React.FC = () => {
             const eventData = {
               title: eventForm.title,
               event_type: eventForm.event_type,
-              start_time: new Date(eventForm.start_time).toISOString(),
-              end_time: new Date(eventForm.end_time).toISOString(),
+              start_date: new Date(eventForm.start_time).toISOString(),
+              end_date: new Date(eventForm.end_time).toISOString(),
               location: eventForm.location === 'outro' ? customLocation : eventForm.location || null,
               description: eventForm.description || null,
               value: eventForm.value ? parseFloat(eventForm.value) : null,
@@ -185,8 +185,8 @@ const CalendarPage: React.FC = () => {
     setEventForm({
       title: event.title,
       event_type: event.event_type,
-      start_time: format(new Date(event.start_time), "yyyy-MM-dd'T'HH:mm"),
-      end_time: format(new Date(event.end_time), "yyyy-MM-dd'T'HH:mm"),
+      start_time: format(new Date(event.start_date), "yyyy-MM-dd'T'HH:mm"),
+      end_time: format(new Date(event.end_date), "yyyy-MM-dd'T'HH:mm"),
       location: isCustomLocation ? 'outro' : (event.location || ''),
       description: event.description || '',
       value: event.value ? event.value.toString() : '',
@@ -226,13 +226,13 @@ const CalendarPage: React.FC = () => {
 
   const getEventsForDate = (date: Date): CalendarEvent[] => {
     return events.filter(event => 
-      isSameDay(new Date(event.start_time), date)
+      isSameDay(new Date(event.start_date), date)
     ) as CalendarEvent[];
   };
 
   const getEventsForRange = (startDate: Date, endDate: Date): CalendarEvent[] => {
     return events.filter(event => {
-      const eventDate = new Date(event.start_time);
+      const eventDate = new Date(event.start_date);
       return eventDate >= startDate && eventDate <= endDate;
     }) as CalendarEvent[];
   };
@@ -241,8 +241,8 @@ const CalendarPage: React.FC = () => {
     let icsContent = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MedicoAgenda//Calendar//PT\n';
     
     events.forEach(event => {
-      const startDate = new Date(event.start_time).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      const endDate = new Date(event.end_time).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const startDate = new Date(event.start_date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const endDate = new Date(event.end_date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
       
       icsContent += 'BEGIN:VEVENT\n';
       icsContent += `UID:${event.id}@medicoagenda.com\n`;
@@ -314,7 +314,7 @@ const CalendarPage: React.FC = () => {
                   handleEditEvent(event);
                 }}
               >
-                {format(new Date(event.start_time), 'HH:mm')} {event.title}
+                {format(new Date(event.start_date), 'HH:mm')} {event.title}
               </div>
             ))}
             {dayEvents.length > 2 && (
@@ -376,7 +376,7 @@ const CalendarPage: React.FC = () => {
               >
                 <div className="font-medium">{event.title}</div>
                 <div className="text-xs opacity-90">
-                  {format(new Date(event.start_time), 'HH:mm')} - {format(new Date(event.end_time), 'HH:mm')}
+                  {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
                 </div>
                 {event.location && (
                   <div className="text-xs opacity-75">{event.location}</div>
@@ -401,7 +401,7 @@ const CalendarPage: React.FC = () => {
 
   const renderDayView = () => {
     const dayEvents = getEventsForDate(currentDate).sort((a, b) => 
-      new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
 
     const hours = Array.from({ length: 24 }, (_, i) => i);
@@ -418,7 +418,7 @@ const CalendarPage: React.FC = () => {
           <div className="max-h-96 overflow-y-auto">
             {hours.map(hour => {
               const hourEvents = dayEvents.filter(event => 
-                new Date(event.start_time).getHours() === hour
+                new Date(event.start_date).getHours() === hour
               );
               
               return (
@@ -438,7 +438,7 @@ const CalendarPage: React.FC = () => {
                       >
                         <div className="font-medium">{event.title}</div>
                         <div className="text-xs opacity-90">
-                          {format(new Date(event.start_time), 'HH:mm')} - {format(new Date(event.end_time), 'HH:mm')}
+                          {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
                         </div>
                         {event.location && (
                           <div className="text-xs opacity-75">{event.location}</div>

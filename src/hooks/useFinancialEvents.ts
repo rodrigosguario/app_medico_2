@@ -15,6 +15,8 @@ type FinancialEvent = {
   type: string; // Changed from 'income' | 'expense' to string for compatibility
   category?: string;
   status: string;
+  is_paid?: boolean;
+  payment_method?: string;
   created_at: string;
   updated_at: string;
 };

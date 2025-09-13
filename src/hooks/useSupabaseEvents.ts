@@ -116,8 +116,8 @@ export const useSupabaseEvents = () => {
           syncCreateEvent({
             id: data.id,
             title: data.title,
-            start_time: data.start_time,
-            end_time: data.end_time,
+            start_time: data.start_date,
+            end_time: data.end_date,
             event_type: data.event_type,
             location: data.location || '',
             description: data.description || '',
@@ -172,8 +172,8 @@ export const useSupabaseEvents = () => {
           syncUpdateEvent({
             id: data.id,
             title: data.title,
-            start_time: data.start_time,
-            end_time: data.end_time,
+            start_time: data.start_date,
+            end_time: data.end_date,
             event_type: data.event_type,
             location: data.location || '',
             description: data.description || '',
@@ -220,8 +220,8 @@ export const useSupabaseEvents = () => {
           syncDeleteEvent({
             id: eventToDelete.id,
             title: eventToDelete.title,
-            start_time: eventToDelete.start_time,
-            end_time: eventToDelete.end_time,
+            start_time: eventToDelete.start_date,
+            end_time: eventToDelete.end_date,
             event_type: eventToDelete.event_type,
             location: eventToDelete.location || '',
             description: eventToDelete.description || '',

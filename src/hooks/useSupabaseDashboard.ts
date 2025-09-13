@@ -13,8 +13,8 @@ interface DashboardMetrics {
 interface UpcomingEvent {
   id: string;
   title: string;
-  start_time: string;
-  end_time: string;
+  start_date: string;
+  end_date: string;
   event_type: string;
   status: string;
   value: number | null;
@@ -70,9 +70,9 @@ export const useSupabaseDashboard = () => {
             hospitals(name)
           `)
           .eq('user_id', userId)
-          .gte('start_time', monthStart.toISOString())
-          .lte('start_time', monthEnd.toISOString())
-          .order('start_time', { ascending: true });
+          .gte('start_date', monthStart.toISOString())
+          .lte('start_date', monthEnd.toISOString())
+          .order('start_date', { ascending: true });
 
         if (eventsError) throw eventsError;
 
@@ -131,8 +131,8 @@ export const useSupabaseDashboard = () => {
   const calculateMetrics = (events: any[], financialEvents: any[]): DashboardMetrics => {
     // Calculate total hours from events
     const totalHours = events.reduce((total, event) => {
-      const start = new Date(event.start_time);
-      const end = new Date(event.end_time);
+      const start = new Date(event.start_date);
+      const end = new Date(event.end_date);
       const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
       return total + hours;
     }, 0);
@@ -142,7 +142,7 @@ export const useSupabaseDashboard = () => {
 
     // Calculate monthly revenue from financial events
     const monthlyRevenue = financialEvents
-      .filter(fe => fe.transaction_type === 'RECEITA')
+      .filter(fe => fe.type === 'income')
       .reduce((total, fe) => total + parseFloat(fe.amount), 0);
 
     // Calculate completion rate
@@ -161,13 +161,13 @@ export const useSupabaseDashboard = () => {
     const now = new Date();
     
     return events
-      .filter(event => new Date(event.start_time) > now)
+      .filter(event => new Date(event.start_date) > now)
       .slice(0, 5)
       .map(event => ({
         id: event.id,
         title: event.title,
-        start_time: event.start_time,
-        end_time: event.end_time,
+        start_date: event.start_date,
+        end_date: event.end_date,
         event_type: event.event_type,
         status: event.status,
         value: event.value,
@@ -191,23 +191,23 @@ export const useSupabaseDashboard = () => {
 
     // Events today
     const eventsToday = events.filter(event => {
-      const eventStart = new Date(event.start_time);
+      const eventStart = new Date(event.start_date);
       return eventStart >= startOfToday && eventStart < endOfToday;
     }).length;
 
     // Events this week
     const eventsThisWeek = events.filter(event => {
-      const eventStart = new Date(event.start_time);
+      const eventStart = new Date(event.start_date);
       return eventStart >= startOfWeek && eventStart < endOfWeek;
     }).length;
 
     // Next shift time (next PLANTAO)
     const nextShift = events
-      .filter(event => event.event_type === 'PLANTAO' && new Date(event.start_time) > today)
-      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0];
+      .filter(event => event.event_type === 'PLANTAO' && new Date(event.start_date) > today)
+      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0];
 
     const nextShiftTime = nextShift 
-      ? new Date(nextShift.start_time).toLocaleTimeString('pt-BR', { 
+      ? new Date(nextShift.start_date).toLocaleTimeString('pt-BR', { 
           hour: '2-digit', 
           minute: '2-digit' 
         })
@@ -215,11 +215,11 @@ export const useSupabaseDashboard = () => {
 
     // Net revenue (revenue - expenses)
     const revenue = financialEvents
-      .filter(fe => fe.transaction_type === 'RECEITA')
+      .filter(fe => fe.type === 'income')
       .reduce((total, fe) => total + parseFloat(fe.amount), 0);
     
     const expenses = financialEvents
-      .filter(fe => fe.transaction_type === 'DESPESA')
+      .filter(fe => fe.type === 'expense')
       .reduce((total, fe) => total + parseFloat(fe.amount), 0);
 
     return {

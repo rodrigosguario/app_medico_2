@@ -62,6 +62,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          value: number | null
         }
         Insert: {
           calendar_id?: string | null
@@ -77,6 +78,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          value?: number | null
         }
         Update: {
           calendar_id?: string | null
@@ -92,6 +94,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          value?: number | null
         }
         Relationships: [
           {
@@ -120,6 +123,8 @@ export type Database = {
           description: string | null
           event_id: string | null
           id: string
+          is_paid: boolean | null
+          payment_method: string | null
           status: string | null
           title: string
           type: string
@@ -135,6 +140,8 @@ export type Database = {
           description?: string | null
           event_id?: string | null
           id?: string
+          is_paid?: boolean | null
+          payment_method?: string | null
           status?: string | null
           title: string
           type: string
@@ -150,6 +157,8 @@ export type Database = {
           description?: string | null
           event_id?: string | null
           id?: string
+          is_paid?: boolean | null
+          payment_method?: string | null
           status?: string | null
           title?: string
           type?: string

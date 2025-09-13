@@ -45,15 +45,15 @@ const FinancialPage: React.FC = () => {
     });
 
     const revenue = currentMonthEvents
-      .filter(event => event.transaction_type === 'RECEITA')
+      .filter(event => event.type === 'income')
       .reduce((sum, event) => sum + parseFloat(event.amount.toString()), 0);
 
     const expenses = currentMonthEvents
-      .filter(event => event.transaction_type === 'DESPESA')
+      .filter(event => event.type === 'expense')
       .reduce((sum, event) => sum + parseFloat(event.amount.toString()), 0);
 
     const confirmedRevenue = currentMonthEvents
-      .filter(event => event.transaction_type === 'RECEITA' && event.is_paid)
+      .filter(event => event.type === 'income' && event.is_paid)
       .reduce((sum, event) => sum + parseFloat(event.amount.toString()), 0);
 
     const pendingRevenue = revenue - confirmedRevenue;
@@ -64,10 +64,10 @@ const FinancialPage: React.FC = () => {
 
     currentMonthEvents.forEach(event => {
       const amount = parseFloat(event.amount.toString());
-      if (event.transaction_type === 'RECEITA') {
-        revenueByCategory[event.category] = (revenueByCategory[event.category] || 0) + amount;
+      if (event.type === 'income') {
+        revenueByCategory[event.category || 'Outros'] = (revenueByCategory[event.category || 'Outros'] || 0) + amount;
       } else {
-        expensesByCategory[event.category] = (expensesByCategory[event.category] || 0) + amount;
+        expensesByCategory[event.category || 'Outros'] = (expensesByCategory[event.category || 'Outros'] || 0) + amount;
       }
     });
 
@@ -127,7 +127,7 @@ const FinancialPage: React.FC = () => {
   };
 
   const getTransactionTypeColor = (type: string) => {
-    return type === 'RECEITA' ? 'text-success' : 'text-destructive';
+    return type === 'income' ? 'text-success' : 'text-destructive';
   };
 
   if (loading) {
@@ -444,14 +444,14 @@ const FinancialPage: React.FC = () => {
                         >
                           <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${
-                              transaction.transaction_type === 'RECEITA' ? 'bg-success/10' : 'bg-destructive/10'
+                              transaction.type === 'income' ? 'bg-success/10' : 'bg-destructive/10'
                             }`}>
-                              {getCategoryIcon(transaction.category)}
+                              {getCategoryIcon(transaction.category || 'Outros')}
                             </div>
                             <div>
-                              <p className="font-medium text-sm">{transaction.description}</p>
+                              <p className="font-medium text-sm">{transaction.title}</p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>{transaction.category}</span>
+                                <span>{transaction.category || 'Outros'}</span>
                                 <span>•</span>
                                 <span>{new Date(transaction.date).toLocaleDateString('pt-BR')}</span>
                                 <span>•</span>
@@ -463,8 +463,8 @@ const FinancialPage: React.FC = () => {
                           </div>
                           
                           <div className="text-right">
-                            <div className={`font-semibold ${getTransactionTypeColor(transaction.transaction_type)}`}>
-                              {transaction.transaction_type === 'RECEITA' ? '+' : '-'}{formatCurrency(parseFloat(transaction.amount.toString()))}
+                            <div className={`font-semibold ${getTransactionTypeColor(transaction.type)}`}>
+                              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(parseFloat(transaction.amount.toString()))}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {transaction.payment_method?.replace('_', ' ') || 'N/A'}
