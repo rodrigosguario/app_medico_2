@@ -100,7 +100,7 @@ const Navigation: React.FC = () => {
               <div className="bg-medical p-2 rounded-lg">
                 <Stethoscope className="h-6 w-6 text-medical-foreground" />
               </div>
-              <h1 className="text-xl font-bold text-foreground">MedicoAgenda</h1>
+              <h1 className="text-xl font-bold text-foreground">Planton Sync</h1>
             </div>
             
             {/* Actions */}
