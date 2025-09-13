@@ -90,15 +90,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     if (isFirstLoad && !minimized) {
       setMessages([{
         id: '1',
-        content: `Olá! 👋 Sou seu assistente virtual para gestão médica. Posso ajudar você com:
+        content: `Olá! 👋 Sou seu assistente de IA especializado em gestão médica. Tenho acesso aos seus dados e posso ajudar você com:
 
-🗓️ **Análise de agenda** - Verificar próximos compromissos e distribuição de horários
-📊 **Insights de carga horária** - Analisar padrões de trabalho e sugerir otimizações  
-📝 **Resumos de plantões** - Criar relatórios das suas atividades
-💰 **Análise financeira** - Revisar rendimentos e despesas
-📈 **Relatórios personalizados** - Gerar insights sobre sua produtividade
+🤖 **Análise inteligente** - Processamento dos seus dados com IA real
+🗓️ **Gestão de agenda** - Análise de compromissos e otimização de horários  
+📊 **Insights personalizados** - Relatórios baseados na sua atividade
+💰 **Controle financeiro** - Análise de receitas e despesas
+📈 **Otimização** - Sugestões para melhorar sua produtividade
+🏥 **Gestão de plantões** - Distribuição e organização de carga horária
 
-Como posso ajudar você hoje?`,
+Posso analisar seus dados reais e fornecer insights específicos para o seu perfil médico. Como posso ajudar você hoje?`,
         sender: 'assistant',
         timestamp: new Date()
       }]);
@@ -121,14 +122,37 @@ Como posso ajudar você hoje?`,
     setIsLoading(true);
 
     try {
-      // Simple rule-based responses for now
-      let response = generateSimpleResponse(messageText);
-      
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate AI processing
+      // Get user profile and recent data for context
+      const userProfile = user ? {
+        name: user.user_metadata?.name || 'Usuário',
+        specialty: user.user_metadata?.specialty || 'Médico',
+        crm: user.user_metadata?.crm || 'N/A'
+      } : null;
+
+      // Call AI assistant edge function with proper URL
+      const supabaseUrl = 'https://kmwsoppkrjzjioeadtqb.supabase.co';
+      const response = await fetch(`${supabaseUrl}/functions/v1/ai-assistant`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          message: messageText,
+          userId: user?.id,
+          includeData: true
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: response,
+        content: data.response || data.fallbackText || "Desculpe, não consegui processar sua solicitação.",
         sender: 'assistant',
         timestamp: new Date()
       };
@@ -136,20 +160,24 @@ Como posso ajudar você hoje?`,
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao comunicar com o assistente. Tente novamente.",
-        variant: "destructive",
-      });
-
-      const errorMessage: Message = {
+      
+      // Fallback to rule-based response
+      const fallbackResponse = generateSimpleResponse(messageText);
+      
+      const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente ou reformule sua pergunta.",
+        content: fallbackResponse,
         sender: 'assistant',
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
+      
+      toast({
+        title: "Modo Offline",
+        description: "Usando respostas básicas. Verifique sua conexão para funcionalidade completa.",
+        variant: "default",
+      });
     } finally {
       setIsLoading(false);
     }

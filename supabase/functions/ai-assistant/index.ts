@@ -35,11 +35,11 @@ serve(async (req) => {
         .from('events')
         .select(`
           *,
-          calendars(name, color, category),
+          calendars(name, color),
           hospitals(name, address)
         `)
         .eq('user_id', userId)
-        .order('start_time', { ascending: true });
+        .order('start_date', { ascending: true });
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -57,8 +57,8 @@ serve(async (req) => {
       // Process data for context
       if (events && events.length > 0) {
         const now = new Date();
-        const upcomingEvents = events.filter(event => new Date(event.start_time) > now).slice(0, 10);
-        const recentEvents = events.filter(event => new Date(event.start_time) <= now).slice(-10);
+        const upcomingEvents = events.filter(event => new Date(event.start_date) > now).slice(0, 10);
+        const recentEvents = events.filter(event => new Date(event.start_date) <= now).slice(-10);
         
         // Calculate workload metrics
         const thisWeekStart = new Date();
@@ -67,13 +67,13 @@ serve(async (req) => {
         thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
         
         const thisWeekEvents = events.filter(event => {
-          const eventDate = new Date(event.start_time);
+          const eventDate = new Date(event.start_date);
           return eventDate >= thisWeekStart && eventDate <= thisWeekEnd;
         });
 
         const totalHoursThisWeek = thisWeekEvents.reduce((total, event) => {
-          const start = new Date(event.start_time);
-          const end = new Date(event.end_time);
+          const start = new Date(event.start_date);
+          const end = new Date(event.end_date);
           return total + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
         }, 0);
 
@@ -96,7 +96,7 @@ ESTATÍSTICAS DA SEMANA ATUAL:
 PRÓXIMOS EVENTOS (${upcomingEvents.length}):
 ${upcomingEvents.map(event => `
 - ${event.title} (${event.event_type})
-  Data: ${new Date(event.start_time).toLocaleDateString('pt-BR')} às ${new Date(event.start_time).toLocaleTimeString('pt-BR')}
+  Data: ${new Date(event.start_date).toLocaleDateString('pt-BR')} às ${new Date(event.start_date).toLocaleTimeString('pt-BR')}
   Local: ${event.location || 'Não especificado'}
   Status: ${event.status}
 `).join('')}
@@ -104,14 +104,14 @@ ${upcomingEvents.map(event => `
 EVENTOS RECENTES (${recentEvents.length}):
 ${recentEvents.map(event => `
 - ${event.title} (${event.event_type})
-  Data: ${new Date(event.start_time).toLocaleDateString('pt-BR')}
+  Data: ${new Date(event.start_date).toLocaleDateString('pt-BR')}
   Status: ${event.status}
 `).join('')}
 
 DADOS FINANCEIROS RECENTES:
 ${financialEvents ? financialEvents.slice(0, 5).map(finance => `
-- ${finance.description}: R$ ${finance.amount}
-  Tipo: ${finance.transaction_type}
+- ${finance.title}: R$ ${finance.amount}
+  Tipo: ${finance.type}
   Data: ${new Date(finance.date).toLocaleDateString('pt-BR')}
   Pago: ${finance.is_paid ? 'Sim' : 'Não'}
 `).join('') : 'Nenhum dado financeiro encontrado'}
