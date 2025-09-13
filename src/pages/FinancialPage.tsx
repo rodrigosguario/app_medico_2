@@ -96,10 +96,20 @@ const FinancialPage: React.FC = () => {
 
   const handleCreateTransaction = async (transactionData: any) => {
     console.log('Creating transaction:', transactionData);
-    await createFinancialEvent({
+    
+    // Map form data to database format
+    const mappedData = {
       ...transactionData,
       amount: parseFloat(transactionData.amount),
-    });
+      type: transactionData.transaction_type === 'RECEITA' ? 'income' : 'expense',
+      currency: 'BRL',
+      status: 'confirmed'
+    };
+    
+    // Remove the old field name
+    delete mappedData.transaction_type;
+    
+    await createFinancialEvent(mappedData);
   };
 
   const handleOpenTransactionDialog = () => {
