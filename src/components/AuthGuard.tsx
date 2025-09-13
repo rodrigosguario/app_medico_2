@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
+import { useSearchParams } from 'react-router-dom';
+import { AuthErrorHandler } from '@/components/AuthErrorHandler';
 
 interface AuthContextType {
   user: User | null;
@@ -136,6 +138,10 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   fallback 
 }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  
+  // Check for authentication errors in URL
+  const hasAuthError = searchParams.get('error') || searchParams.get('error_code');
 
   if (isLoading) {
     return (
@@ -146,6 +152,10 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
         </div>
       </div>
     );
+  }
+
+  if (hasAuthError) {
+    return <AuthErrorHandler />;
   }
 
   if (!isAuthenticated) {
