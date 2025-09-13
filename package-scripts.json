@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "test": "chmod +x scripts/test.sh && ./scripts/test.sh",
+    "test:docker": "docker-compose -f docker-compose.yml -f docker-compose.test.yml up --build --abort-on-container-exit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "type-check": "tsc --noEmit",
+    "validate": "npm run type-check && npm run lint"
+  }
+}

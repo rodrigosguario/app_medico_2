@@ -1,0 +1,421 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/components/AuthGuard';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import Navigation from '../components/Navigation';
+import { User, Bell, Shield, Calendar, Database, Download, Trash2, Save } from 'lucide-react';
+
+const SettingsPage: React.FC = () => {
+  const { profile } = useProfile();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    crm: '',
+    specialty: '',
+    phone: ''
+  });
+
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('notifications_preferences');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (error) {
+        console.error('Error loading notification preferences:', error);
+      }
+    }
+    return {
+      emailAlerts: true,
+      pushNotifications: true,
+      weeklyReports: false,
+      eventReminders: true
+    };
+  });
+
+  // Update form when profile data loads
+  useEffect(() => {
+    if (profile) {
+      setProfileForm({
+        name: profile.name || '',
+        email: profile.email || user?.email || '',
+        crm: profile.crm || '',
+        specialty: profile.specialty || '',
+        phone: profile.phone || ''
+      });
+    }
+  }, [profile, user]);
+
+  const handleNotificationChange = (key: keyof typeof notifications, value: boolean) => {
+    const newNotifications = { ...notifications, [key]: value };
+    setNotifications(newNotifications);
+    localStorage.setItem('notifications_preferences', JSON.stringify(newNotifications));
+    
+    toast({
+      title: "Configuração atualizada",
+      description: "Suas preferências de notificação foram salvas automaticamente.",
+    });
+  };
+
+  const handleProfileSave = async () => {
+    setIsLoading(true);
+    try {
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          name: profileForm.name,
+          email: profileForm.email,
+          crm: profileForm.crm,
+          specialty: profileForm.specialty,
+          phone: profileForm.phone,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Perfil atualizado',
+        description: 'Suas informações foram salvas com sucesso.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro ao salvar',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNotificationsSave = async () => {
+    setIsLoading(true);
+    try {
+      // For now, just store in localStorage until notifications table is created
+      localStorage.setItem('notifications_preferences', JSON.stringify(notifications));
+      
+      toast({
+        title: 'Preferências salvas',
+        description: 'Suas preferências de notificação foram atualizadas.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Não foi possível salvar as preferências.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
+            <p className="text-muted-foreground">Gerencie suas preferências e informações pessoais</p>
+          </div>
+
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Perfil
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notificações
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Calendário
+              </TabsTrigger>
+              <TabsTrigger value="data" className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Dados
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informações Pessoais</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome Completo</Label>
+                      <Input
+                        id="name"
+                        value={profileForm.name}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Digite seu nome completo"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Digite seu e-mail"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="crm">CRM</Label>
+                      <Input
+                        id="crm"
+                        value={profileForm.crm}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, crm: e.target.value }))}
+                        placeholder="Ex: 12345/SP"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="specialty">Especialidade</Label>
+                      <Input
+                        id="specialty"
+                        value={profileForm.specialty}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, specialty: e.target.value }))}
+                        placeholder="Ex: Cardiologia"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Telefone</Label>
+                      <Input
+                        id="phone"
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleProfileSave} disabled={isLoading}>
+                    {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="notifications" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preferências de Notificação</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Alertas por E-mail</Label>
+                      <p className="text-sm text-muted-foreground">Receber notificações importantes por e-mail</p>
+                    </div>
+                    <Switch
+                      checked={notifications.emailAlerts}
+                      onCheckedChange={(checked) => handleNotificationChange('emailAlerts', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Notificações Push</Label>
+                      <p className="text-sm text-muted-foreground">Receber notificações no navegador</p>
+                    </div>
+                    <Switch
+                      checked={notifications.pushNotifications}
+                      onCheckedChange={(checked) => handleNotificationChange('pushNotifications', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Relatórios Semanais</Label>
+                      <p className="text-sm text-muted-foreground">Receber resumo semanal de atividades</p>
+                    </div>
+                    <Switch
+                      checked={notifications.weeklyReports}
+                      onCheckedChange={(checked) => handleNotificationChange('weeklyReports', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Lembretes de Eventos</Label>
+                      <p className="text-sm text-muted-foreground">Receber lembretes de compromissos</p>
+                    </div>
+                    <Switch
+                      checked={notifications.eventReminders}
+                      onCheckedChange={(checked) => handleNotificationChange('eventReminders', checked)}
+                    />
+                  </div>
+                  <Button onClick={handleNotificationsSave} disabled={isLoading}>
+                    {isLoading ? 'Salvando...' : 'Salvar Preferências'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="calendar" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações de Calendário</CardTitle>
+                  <CardDescription>Personalize a exibição e comportamento do calendário</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-medium">Exibir fins de semana</Label>
+                      <p className="text-sm text-muted-foreground">Mostrar sábados e domingos no calendário</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-medium">Visualização padrão</Label>
+                      <p className="text-sm text-muted-foreground">Visualização inicial ao abrir o calendário</p>
+                    </div>
+                    <Select defaultValue="month">
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="day">Dia</SelectItem>
+                        <SelectItem value="week">Semana</SelectItem>
+                        <SelectItem value="month">Mês</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-medium">Horário de trabalho início</Label>
+                      <p className="text-sm text-muted-foreground">Primeiro horário visível no calendário</p>
+                    </div>
+                    <Select defaultValue="06:00">
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                            {`${i.toString().padStart(2, '0')}:00`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-medium">Horário de trabalho fim</Label>
+                      <p className="text-sm text-muted-foreground">Último horário visível no calendário</p>
+                    </div>
+                    <Select defaultValue="22:00">
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                            {`${i.toString().padStart(2, '0')}:00`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-medium">Lembretes automáticos</Label>
+                      <p className="text-sm text-muted-foreground">Criar lembretes para todos os eventos</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+
+                  <Button className="w-full">
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar Configurações
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="data" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações de Dados</CardTitle>
+                  <CardDescription>Gerencie backup, exportação e privacidade dos dados</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-medium">Backup automático</Label>
+                      <p className="text-sm text-muted-foreground">Fazer backup dos dados semanalmente</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Exportação de dados</Label>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar perfil
+                      </Button>
+                      <Button variant="outline" className="flex-1">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar eventos
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Retenção de dados</Label>
+                    <Select defaultValue="2years">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1year">1 ano</SelectItem>
+                        <SelectItem value="2years">2 anos</SelectItem>
+                        <SelectItem value="5years">5 anos</SelectItem>
+                        <SelectItem value="forever">Permanente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">Tempo para manter dados antigos</p>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <Button variant="destructive" className="w-full">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir todos os dados
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                      Esta ação não pode ser desfeita
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default SettingsPage;
