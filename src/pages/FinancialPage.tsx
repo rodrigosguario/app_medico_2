@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 import { FinancialTransactionDialog } from '@/components/FinancialTransactionDialog';
 
 const FinancialPage: React.FC = () => {
-  const { financialEvents, loading, error, createFinancialEvent } = useFinancialEvents();
+  const { financialEvents, loading, error, createFinancialEvent, syncEventsToFinancial } = useFinancialEvents();
   const { isMinimized, isVisible, showAssistant, hideAssistant, toggleMinimized } = useAIAssistant();
   const [selectedPeriod, setSelectedPeriod] = useState('current_month');
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
@@ -237,6 +237,14 @@ const FinancialPage: React.FC = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={syncEventsToFinancial}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Importar Plantões
+                    </Button>
                     <AssistantButton 
                       onClick={showAssistant}
                       variant="outline" 
@@ -373,6 +381,14 @@ const FinancialPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={syncEventsToFinancial}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Importar Plantões
+                  </Button>
                   <AssistantButton 
                     onClick={showAssistant}
                     variant="outline" 
@@ -578,18 +594,26 @@ const FinancialPage: React.FC = () => {
                             }`}>
                               {getCategoryIcon(transaction.category || 'Outros')}
                             </div>
-                            <div>
-                              <p className="font-medium text-sm">{transaction.title}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>{transaction.category || 'Outros'}</span>
-                                <span>•</span>
-                                <span>{new Date(transaction.date).toLocaleDateString('pt-BR')}</span>
-                                <span>•</span>
-                                <Badge variant={transaction.is_paid ? "default" : "outline"} className="text-xs">
-                                  {transaction.is_paid ? 'Pago' : 'Pendente'}
-                                </Badge>
-                              </div>
-                            </div>
+                             <div>
+                               <div className="flex items-center gap-2">
+                                 <p className="font-medium text-sm">{transaction.title}</p>
+                                 {transaction.event_id && (
+                                   <Badge variant="secondary" className="text-xs">
+                                     <Calendar className="h-3 w-3 mr-1" />
+                                     Plantão
+                                   </Badge>
+                                 )}
+                               </div>
+                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                 <span>{transaction.category || 'Outros'}</span>
+                                 <span>•</span>
+                                 <span>{new Date(transaction.date).toLocaleDateString('pt-BR')}</span>
+                                 <span>•</span>
+                                 <Badge variant={transaction.is_paid ? "default" : "outline"} className="text-xs">
+                                   {transaction.is_paid ? 'Pago' : 'Pendente'}
+                                 </Badge>
+                               </div>
+                             </div>
                           </div>
                           
                           <div className="text-right">

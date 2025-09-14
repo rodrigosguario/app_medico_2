@@ -30,6 +30,80 @@ export const useFinancialEvents = () => {
   const [error, setError] = useState<string | null>(null);
   const { syncStatus } = useSupabaseSync();
 
+  const syncEventsToFinancial = async () => {
+    try {
+      console.log('🔄 Sincronizando eventos para financeiro...');
+      
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) return;
+
+      // Buscar eventos com valor
+      const { data: events, error: eventsError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('user_id', user.data.user.id)
+        .not('value', 'is', null)
+        .gt('value', 0);
+
+      if (eventsError) throw eventsError;
+
+      if (!events || events.length === 0) {
+        console.log('📋 Nenhum evento com valor encontrado');
+        return;
+      }
+
+      // Verificar quais eventos já existem na tabela financial_events
+      const { data: existingFinancial, error: financialError } = await supabase
+        .from('financial_events')
+        .select('event_id')
+        .eq('user_id', user.data.user.id)
+        .not('event_id', 'is', null);
+
+      if (financialError) throw financialError;
+
+      const existingEventIds = new Set(existingFinancial?.map(f => f.event_id) || []);
+
+      // Criar transações financeiras para eventos que ainda não existem
+      const eventsToSync = events.filter(event => !existingEventIds.has(event.id));
+      
+      if (eventsToSync.length === 0) {
+        console.log('✅ Todos os eventos já estão sincronizados');
+        return;
+      }
+
+      console.log(`💰 Sincronizando ${eventsToSync.length} eventos`);
+
+      const financialEventsToInsert = eventsToSync.map(event => ({
+        user_id: user.data.user.id,
+        event_id: event.id,
+        title: `Plantão - ${event.title}`,
+        description: event.description || `Plantão de ${event.event_type || 'medicina'} realizado`,
+        amount: Number(event.value),
+        currency: 'BRL',
+        date: event.start_date.split('T')[0], // Extrair apenas a data
+        type: 'income',
+        category: event.event_type || 'plantao',
+        status: 'confirmed',
+        is_paid: true,
+        payment_method: 'transferencia'
+      }));
+
+      const { error: insertError } = await supabase
+        .from('financial_events')
+        .insert(financialEventsToInsert);
+
+      if (insertError) throw insertError;
+
+      console.log(`✅ ${financialEventsToInsert.length} eventos sincronizados com sucesso`);
+      
+      // Recarregar dados financeiros
+      await loadFinancialEvents();
+      
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar eventos:', error);
+    }
+  };
+
   const loadFinancialEvents = async () => {
     try {
       setLoading(true);
@@ -151,6 +225,8 @@ export const useFinancialEvents = () => {
   useEffect(() => {
     if (syncStatus.isOnline) {
       loadFinancialEvents();
+      // Sincronizar eventos automaticamente após carregar
+      syncEventsToFinancial();
     }
   }, [syncStatus.isOnline]);
 
@@ -161,6 +237,7 @@ export const useFinancialEvents = () => {
     createFinancialEvent,
     updateFinancialEvent,
     deleteFinancialEvent,
-    refreshFinancialEvents: loadFinancialEvents
+    refreshFinancialEvents: loadFinancialEvents,
+    syncEventsToFinancial
   };
 };
