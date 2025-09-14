@@ -36,7 +36,32 @@ export const useProfile = () => {
           .eq('user_id', user.id)
           .single();
 
-        if (error) {
+        if (error && error.code === 'PGRST116') {
+          // Profile doesn't exist, create it using auth metadata
+          console.log('Profile not found, creating from auth metadata...');
+          
+          const profileData = {
+            user_id: user.id,
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+            email: user.email || '',
+            crm: user.user_metadata?.crm || '',
+            specialty: user.user_metadata?.specialty || ''
+          };
+
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert(profileData)
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            setError('Erro ao criar perfil');
+          } else {
+            console.log('Profile created successfully');
+            setProfile(newProfile);
+          }
+        } else if (error) {
           console.error('Error fetching profile:', error);
           setError(error.message);
         } else {
