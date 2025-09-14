@@ -35,11 +35,15 @@ export const useFinancialEvents = () => {
       setLoading(true);
       setError(null);
 
+      console.log('🔄 Loading financial events...');
+
       if (syncStatus.isOnline) {
         const user = await supabase.auth.getUser();
         if (!user.data.user) {
           throw new Error('Usuário não autenticado');
         }
+
+        console.log('👤 User authenticated:', user.data.user.id);
 
         const { data, error: supabaseError } = await supabase
           .from('financial_events')
@@ -49,20 +53,25 @@ export const useFinancialEvents = () => {
 
         if (supabaseError) throw supabaseError;
 
+        console.log('💰 Financial events loaded:', data?.length || 0, 'items');
+
         if (data) {
           setFinancialEvents(data);
         }
       }
     } catch (error) {
-      console.error('Error loading financial events:', error);
+      console.error('❌ Error loading financial events:', error);
       setError(error instanceof Error ? error.message : 'Erro ao carregar eventos financeiros');
     } finally {
       setLoading(false);
+      console.log('✅ Financial events loading completed');
     }
   };
 
   const createFinancialEvent = async (eventData: Omit<FinancialEventInsert, 'user_id'>) => {
     try {
+      console.log('💰 Creating financial event:', eventData);
+
       const user = await supabase.auth.getUser();
       if (!user.data.user) {
         throw new Error('Usuário não autenticado');
@@ -73,13 +82,20 @@ export const useFinancialEvents = () => {
         user_id: user.data.user.id
       };
 
+      console.log('📝 Full event data:', fullEventData);
+
       const { data, error } = await supabase
         .from('financial_events')
         .insert([fullEventData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
+
+      console.log('✅ Financial event created successfully:', data);
 
       if (data) {
         setFinancialEvents(prev => [data, ...prev]);
@@ -87,7 +103,7 @@ export const useFinancialEvents = () => {
 
       return data;
     } catch (error) {
-      console.error('Error creating financial event:', error);
+      console.error('❌ Error creating financial event:', error);
       throw error;
     }
   };

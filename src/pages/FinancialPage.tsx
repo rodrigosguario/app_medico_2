@@ -164,6 +164,154 @@ const FinancialPage: React.FC = () => {
                   ))}
                 </div>
               </div>
+        </div>
+      </main>
+
+      {/* AI Assistant Sidebar */}
+      {isVisible && (
+        <aside className={cn(
+          "fixed right-0 top-0 h-full w-96 bg-background border-l border-border z-40 transition-transform duration-300",
+          isMinimized ? "translate-x-full" : "translate-x-0"
+        )}>
+          <div className="h-full pt-16">
+            <AIAssistant 
+              className="h-full"
+              minimized={isMinimized}
+              onMinimizeToggle={toggleMinimized}
+            />
+          </div>
+        </aside>
+      )}
+
+      {/* Minimized Assistant Button */}
+      {isMinimized && (
+        <AIAssistant 
+          minimized={true}
+          onMinimizeToggle={toggleMinimized}
+        />
+      )}
+    </div>
+
+    {/* Transaction Dialog */}
+    <FinancialTransactionDialog
+      open={isTransactionDialogOpen}
+      onOpenChange={setIsTransactionDialogOpen}
+      onSubmit={handleCreateTransaction}
+    />
+  </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center space-y-4">
+            <p className="text-destructive">Erro ao carregar dados financeiros: {error}</p>
+            <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        
+        <div className="flex">
+          <main className={cn(
+            "flex-1 transition-all duration-300",
+            !isMinimized && isVisible ? "mr-96" : ""
+          )}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground">Gestão Financeira</h2>
+                    <p className="text-muted-foreground">
+                      Comece adicionando suas primeiras transações
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AssistantButton 
+                      onClick={showAssistant}
+                      variant="outline" 
+                      size="sm" 
+                    />
+                    <Button 
+                      className="bg-success hover:bg-success/90 text-success-foreground"
+                      onClick={handleOpenTransactionDialog}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Transação
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Empty State */}
+                <Card className="text-center py-12">
+                  <CardContent className="space-y-4">
+                    <Calendar className="h-16 w-16 mx-auto text-muted-foreground" />
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2">Bem-vindo ao seu controle financeiro!</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Adicione transações para começar a acompanhar receitas, despesas e ter insights financeiros
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp className="h-5 w-5 text-success" />
+                            <h4 className="font-medium">Receitas</h4>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Registre plantões, consultas e procedimentos
+                          </p>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingDown className="h-5 w-5 text-destructive" />
+                            <h4 className="font-medium">Despesas</h4>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Controle gastos com combustível, educação e equipamentos
+                          </p>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <PieChart className="h-5 w-5 text-medical" />
+                            <h4 className="font-medium">Relatórios</h4>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Visualize gráficos e projeção de impostos
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    <Button 
+                      size="lg"
+                      className="bg-success hover:bg-success/90 text-success-foreground"
+                      onClick={handleOpenTransactionDialog}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Primeira Transação
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </main>
 
@@ -191,41 +339,13 @@ const FinancialPage: React.FC = () => {
             />
           )}
         </div>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center space-y-4">
-            <p className="text-destructive">Erro ao carregar dados financeiros: {error}</p>
-            <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!summary) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center space-y-4">
-            <Calendar className="h-12 w-12 mx-auto text-muted-foreground" />
-            <div>
-              <h3 className="text-lg font-semibold">Nenhum dado financeiro</h3>
-              <p className="text-muted-foreground">Adicione transações para ver seu resumo financeiro</p>
-            </div>
-            <Button onClick={handleOpenTransactionDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Transação
-            </Button>
-          </div>
-        </main>
+        {/* Transaction Dialog */}
+        <FinancialTransactionDialog
+          open={isTransactionDialogOpen}
+          onOpenChange={setIsTransactionDialogOpen}
+          onSubmit={handleCreateTransaction}
+        />
       </div>
     );
   }
