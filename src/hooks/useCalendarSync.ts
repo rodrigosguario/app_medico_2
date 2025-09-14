@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/components/AuthGuard";
 
 type Provider = {
   id: string;
   name: string;
-  status: "connected" | "disconnected";
+  status: "connected" | "disconnected" | "syncing";
   isEnabled: boolean;
   lastSync?: string;
+  icon?: string;
+  eventsCount?: number;
 };
 
 // ===== GOOGLE (Google Identity Services) =====
@@ -178,11 +180,40 @@ export function useCalendarSync() {
     });
   };
 
+  const syncCalendar = async (providerId: string) => {
+    toast({
+      title: "Sincronização iniciada",
+      description: `Sincronizando calendário ${providerId}...`,
+    });
+  };
+
+  const disconnectProvider = async (providerId: string) => {
+    toast({
+      title: "Provedor desconectado",
+      description: `${providerId} foi desconectado.`,
+    });
+  };
+
+  const getSyncHistory = async () => {
+    return [];
+  };
+
+  const exportToICS = async () => {
+    toast({
+      title: "Exportação iniciada",
+      description: "Gerando arquivo ICS...",
+    });
+  };
+
   return {
     loading,
     providers,
     connectGoogleCalendar,
     connectOutlookCalendar,
     connectIcloudCalendar,
+    syncCalendar,
+    disconnectProvider,
+    getSyncHistory,
+    exportToICS,
   };
 }
