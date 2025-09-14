@@ -91,13 +91,58 @@ async function getGoogleAccessToken(): Promise<string> {
 async function getMicrosoftAccessToken(): Promise<string> {
   console.log("🔑 Iniciando OAuth Microsoft...");
   
-  // Para desenvolvimento, vamos simular um token
-  // Na implementação real, você configuraria o OAuth no Azure
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("🔧 Usando token simulado para desenvolvimento");
-      resolve("demo_microsoft_token_" + Date.now());
-    }, 2000);
+  // Configuração real do Microsoft OAuth
+  const clientId = "seu_microsoft_client_id_aqui"; // Configure com seu Client ID real
+  const redirectUri = window.location.origin;
+  const scope = "https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read";
+  
+  if (!clientId || clientId.includes("seu_microsoft")) {
+    console.log("🔧 Usando token simulado para desenvolvimento");
+    // Fallback para token demo se não configurado 
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve("demo_microsoft_token_" + Date.now());
+      }, 2000);
+    });
+  }
+
+  // URL de autorização do Microsoft
+  const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
+    `client_id=${clientId}&` +
+    `response_type=code&` +
+    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+    `scope=${encodeURIComponent(scope)}&` +
+    `response_mode=query`;
+
+  return new Promise((resolve, reject) => {
+    // Abrir popup para OAuth
+    const popup = window.open(authUrl, 'microsoft-oauth', 'width=500,height=600');
+    
+    const checkClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkClosed);
+        reject(new Error('OAuth cancelado pelo usuário'));
+      }
+    }, 1000);
+
+    // Listener para receber o código de autorização
+    const messageListener = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'MICROSOFT_OAUTH_SUCCESS') {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', messageListener);
+        popup?.close();
+        resolve(event.data.accessToken);
+      } else if (event.data.type === 'MICROSOFT_OAUTH_ERROR') {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', messageListener);
+        popup?.close();
+        reject(new Error(event.data.error));
+      }
+    };
+
+    window.addEventListener('message', messageListener);
   });
 }
 
