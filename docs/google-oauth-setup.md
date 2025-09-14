@@ -63,18 +63,26 @@ Após criar as credentials, você receberá um **Client ID** similar a:
 2. Tente conectar o Google Calendar
 3. Se der erro, verifique os logs no console do navegador
 
-### 4. 📋 Configure Usuários de Teste
+### 4. ⚠️ SOLUÇÃO PARA ERRO 403 - ADICIONAR USUÁRIO DE TESTE
 
-**IMPORTANTE**: Aplicações Google OAuth começam em modo "Testing" por padrão.
+**PROBLEMA**: Erro 403 "access_denied" - App não foi verificado pelo Google.
+**CAUSA**: App está em modo "Testing" - apenas emails autorizados podem fazer login.
 
-1. **Vá em OAuth Consent Screen**
-2. **Na seção "Test users"**, clique **"ADD USERS"**
-3. **Adicione seu email** (o mesmo que você usa para testar)
-4. **Salve as alterações**
+**SOLUÇÃO RÁPIDA - Adicionar Test User:**
 
-**OU para uso público:**
-1. **Mude o status para "In production"**
-2. **Isso pode exigir verificação do Google** para alguns escopos
+1. **Abra** [Google Cloud Console](https://console.cloud.google.com)
+2. **Selecione** seu projeto
+3. **Vá em** "APIs & Services" → **"OAuth consent screen"**
+4. **Role para baixo** até a seção **"Test users"**
+5. **Clique em** "ADD USERS"
+6. **Digite seu email** exatamente como você usa no Google
+7. **Clique** "Save"
+8. **Aguarde 1-2 minutos** para propagar
+9. **Teste novamente** o login
+
+**SOLUÇÃO ALTERNATIVA - Publicar App (Não Recomendado):**
+- Mude de "Testing" para "In production" no OAuth Consent Screen
+- ⚠️ Pode exigir verificação do Google (processo longo)
 
 ### 5. 🔧 Troubleshooting
 
