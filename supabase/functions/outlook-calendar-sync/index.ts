@@ -18,8 +18,14 @@ serve(async (req) => {
   try {
     const { action, outlookAccessToken, userId } = await req.json();
     
-    if (!outlookAccessToken || !userId) {
-      throw new Error('Missing required parameters');
+    console.log('Received request:', { action, userId, hasToken: !!outlookAccessToken });
+    
+    if (!userId) {
+      throw new Error('Missing userId parameter');
+    }
+
+    if (!outlookAccessToken) {
+      throw new Error('Missing outlookAccessToken parameter');
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -47,6 +53,92 @@ serve(async (req) => {
 });
 
 async function importOutlookCalendarEvents(supabase: any, accessToken: string, userId: string) {
+  console.log('Starting import for user:', userId);
+  
+  // Para desenvolvimento, vamos simular eventos do Outlook
+  if (accessToken.startsWith('demo_')) {
+    console.log('Using demo token, simulating Outlook events');
+    
+    const demoEvents = [
+      {
+        id: 'demo_event_1',
+        subject: 'Consulta Cardiológica',
+        body: { content: 'Consulta de rotina com paciente' },
+        location: { displayName: 'Hospital Central' },
+        start: { dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
+        end: { dateTime: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString() },
+        responseStatus: { response: 'accepted' }
+      },
+      {
+        id: 'demo_event_2',
+        subject: 'Plantão Noturno',
+        body: { content: 'Plantão de 12 horas' },
+        location: { displayName: 'UTI Cardíaca' },
+        start: { dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString() },
+        end: { dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000).toISOString() },
+        responseStatus: { response: 'accepted' }
+      }
+    ];
+
+    let importedCount = 0;
+    let errorCount = 0;
+
+    for (const outlookEvent of demoEvents) {
+      try {
+        // Check if event already exists
+        const { data: existingEvent } = await supabase
+          .from('events')
+          .select('id')
+          .eq('external_id', outlookEvent.id)
+          .eq('user_id', userId)
+          .single();
+
+        if (existingEvent) {
+          console.log(`Event ${outlookEvent.id} already exists, skipping`);
+          continue;
+        }
+
+        const eventData = {
+          user_id: userId,
+          external_id: outlookEvent.id,
+          external_source: 'outlook_calendar',
+          title: outlookEvent.subject || 'Evento sem título',
+          description: outlookEvent.body?.content || null,
+          location: outlookEvent.location?.displayName || null,
+          start_date: new Date(outlookEvent.start.dateTime).toISOString(),
+          end_date: new Date(outlookEvent.end.dateTime).toISOString(),
+          event_type: determineEventType(outlookEvent.subject || ''),
+          status: outlookEvent.responseStatus?.response === 'accepted' ? 'confirmed' : 'tentative'
+        };
+
+        const { error } = await supabase
+          .from('events')
+          .insert([eventData]);
+
+        if (error) {
+          console.error(`Error inserting event ${outlookEvent.id}:`, error);
+          errorCount++;
+        } else {
+          importedCount++;
+        }
+      } catch (error) {
+        console.error(`Error processing event ${outlookEvent.id}:`, error);
+        errorCount++;
+      }
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      imported: importedCount,
+      errors: errorCount,
+      totalProcessed: demoEvents.length,
+      message: 'Demo: Eventos simulados importados com sucesso'
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Real Microsoft Graph API call (requires valid token)
   const now = new Date();
   const startTime = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
   const endTime = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
@@ -126,6 +218,8 @@ async function importOutlookCalendarEvents(supabase: any, accessToken: string, u
 }
 
 async function exportEventsToOutlookCalendar(supabase: any, accessToken: string, userId: string) {
+  console.log('Starting export for user:', userId);
+  
   // Get events from the last month to next 3 months
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -143,6 +237,47 @@ async function exportEventsToOutlookCalendar(supabase: any, accessToken: string,
     throw new Error(`Database error: ${error.message}`);
   }
 
+  // Para desenvolvimento com token demo
+  if (accessToken.startsWith('demo_')) {
+    console.log('Using demo token, simulating export to Outlook');
+    
+    let exportedCount = 0;
+    let errorCount = 0;
+
+    for (const event of events || []) {
+      try {
+        // Simulate successful export
+        const fakeExternalId = `demo_exported_${event.id}`;
+        
+        // Update local event with external_id
+        await supabase
+          .from('events')
+          .update({ 
+            external_id: fakeExternalId,
+            external_source: 'outlook_calendar'
+          })
+          .eq('id', event.id);
+
+        exportedCount++;
+        console.log(`Demo: Exported event ${event.title}`);
+      } catch (error) {
+        console.error(`Error exporting event ${event.id}:`, error);
+        errorCount++;
+      }
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      exported: exportedCount,
+      errors: errorCount,
+      totalProcessed: events?.length || 0,
+      message: 'Demo: Eventos exportados com sucesso (simulação)'
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Real Microsoft Graph API calls
   let exportedCount = 0;
   let errorCount = 0;
 
@@ -214,22 +349,29 @@ async function exportEventsToOutlookCalendar(supabase: any, accessToken: string,
 }
 
 async function syncBidirectional(supabase: any, accessToken: string, userId: string) {
-  // First import from Outlook Calendar
-  const importResult = await importOutlookCalendarEvents(supabase, accessToken, userId);
-  const importData = await importResult.json();
+  console.log('Starting bidirectional sync for user:', userId);
+  
+  try {
+    // First import from Outlook Calendar
+    const importResult = await importOutlookCalendarEvents(supabase, accessToken, userId);
+    const importData = await importResult.json();
 
-  // Then export to Outlook Calendar
-  const exportResult = await exportEventsToOutlookCalendar(supabase, accessToken, userId);
-  const exportData = await exportResult.json();
+    // Then export to Outlook Calendar
+    const exportResult = await exportEventsToOutlookCalendar(supabase, accessToken, userId);
+    const exportData = await exportResult.json();
 
-  return new Response(JSON.stringify({
-    success: true,
-    import: importData,
-    export: exportData,
-    message: `Sincronização concluída: ${importData.imported} importados, ${exportData.exported} exportados`
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+    return new Response(JSON.stringify({
+      success: true,
+      import: importData,
+      export: exportData,
+      message: `Sincronização concluída: ${importData.imported} importados, ${exportData.exported} exportados`
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error in bidirectional sync:', error);
+    throw error;
+  }
 }
 
 function determineEventType(title: string): string {

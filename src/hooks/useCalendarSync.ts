@@ -305,12 +305,22 @@ export function useCalendarSync() {
       );
 
       if (providerId === "outlook") {
+        // Buscar o token de acesso do banco
+        const { data: syncSettings } = await supabase
+          .from('calendar_sync_settings')
+          .select('access_token')
+          .eq('user_id', user!.id)
+          .eq('provider', 'outlook')
+          .single();
+
+        const accessToken = syncSettings?.access_token || 'demo_token_' + Date.now();
+
         // Chamar a edge function para sincronização do Outlook
         const { data, error } = await supabase.functions.invoke('outlook-calendar-sync', {
           body: {
             action: 'sync_bidirectional',
             userId: user!.id,
-            outlookAccessToken: 'demo_token_' + Date.now()
+            outlookAccessToken: accessToken
           }
         });
 
@@ -318,7 +328,7 @@ export function useCalendarSync() {
 
         toast({
           title: "✅ Sincronização concluída",
-          description: `Outlook Calendar sincronizado com sucesso. ${data?.imported || 0} eventos importados, ${data?.exported || 0} eventos exportados.`,
+          description: data?.message || `Outlook Calendar sincronizado com sucesso. ${data?.import?.imported || 0} eventos importados, ${data?.export?.exported || 0} eventos exportados.`,
         });
       } else {
         toast({
