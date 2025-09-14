@@ -235,6 +235,22 @@ async function syncBidirectional(supabase: any, credentials: string, userId: str
     const exportResult = await exportEventsToIcloudCalendar(supabase, credentials, userId);
     const exportData = await exportResult.json();
 
+    // Atualizar o timestamp da última sincronização
+    const { error: updateError } = await supabase
+      .from('calendar_sync_settings')
+      .update({ 
+        last_sync: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('provider', 'icloud');
+
+    if (updateError) {
+      console.error('❌ Erro ao atualizar last_sync:', updateError);
+    } else {
+      console.log('✅ Timestamp de sincronização atualizado para iCloud');
+    }
+
     return new Response(JSON.stringify({
       success: true,
       import: importData,

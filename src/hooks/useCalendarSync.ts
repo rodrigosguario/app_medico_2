@@ -174,15 +174,19 @@ export function useCalendarSync() {
   React.useEffect(() => {
     if (!user) return;
     const fetchSettings = async () => {
+      console.log("🔄 Carregando configurações de sincronização para o usuário:", user.id);
+      
       const { data, error } = await supabase
         .from("calendar_sync_settings")
         .select("*")
         .eq("user_id", user.id);
 
       if (error) {
-        console.error("Erro ao carregar configurações:", error);
+        console.error("❌ Erro ao carregar configurações:", error);
         return;
       }
+
+      console.log("📋 Configurações carregadas:", data);
 
       if (data && data.length > 0) {
         setProviders((prev) =>
@@ -193,7 +197,9 @@ export function useCalendarSync() {
                 ...p,
                 status: found.is_enabled ? "connected" : "disconnected",
                 isEnabled: found.is_enabled,
-                lastSync: found.updated_at
+                lastSync: found.last_sync
+                  ? new Date(found.last_sync).toLocaleString("pt-BR")
+                  : found.updated_at
                   ? new Date(found.updated_at).toLocaleString("pt-BR")
                   : undefined,
               };
@@ -466,6 +472,20 @@ export function useCalendarSync() {
         });
       }
 
+      // Atualizar last_sync na base de dados
+      const { error: updateError } = await supabase
+        .from("calendar_sync_settings")
+        .update({ 
+          last_sync: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", user!.id)
+        .eq("provider", providerId);
+
+      if (updateError) {
+        console.error("Erro ao atualizar last_sync:", updateError);
+      }
+
       // Atualizar status para conectado
       setProviders((prev) =>
         prev.map((p) =>
@@ -502,31 +522,43 @@ export function useCalendarSync() {
 
   const disconnectProvider = async (providerId: string) => {
     try {
+      setLoading(true);
+      
       await supabase
         .from("calendar_sync_settings")
-        .update({ is_enabled: false })
+        .update({ 
+          is_enabled: false,
+          updated_at: new Date().toISOString()
+        })
         .eq("user_id", user!.id)
         .eq("provider", providerId);
 
       setProviders((prev) =>
         prev.map((p) =>
           p.id === providerId
-            ? { ...p, status: "disconnected", isEnabled: false }
+            ? { 
+                ...p, 
+                status: "disconnected", 
+                isEnabled: false,
+                lastSync: undefined 
+              }
             : p
         )
       );
 
       toast({
-        title: "Provedor desconectado",
+        title: "✅ Desconectado",
         description: `${providerId} foi desconectado com sucesso.`,
       });
     } catch (error) {
-      console.error("Erro ao desconectar:", error);
+      console.error("❌ Erro ao desconectar:", error);
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: "Falha ao desconectar o provedor",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

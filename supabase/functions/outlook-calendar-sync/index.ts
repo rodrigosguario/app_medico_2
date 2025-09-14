@@ -360,6 +360,22 @@ async function syncBidirectional(supabase: any, accessToken: string, userId: str
     const exportResult = await exportEventsToOutlookCalendar(supabase, accessToken, userId);
     const exportData = await exportResult.json();
 
+    // Atualizar o timestamp da última sincronização
+    const { error: updateError } = await supabase
+      .from('calendar_sync_settings')
+      .update({ 
+        last_sync: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('provider', 'outlook');
+
+    if (updateError) {
+      console.error('❌ Erro ao atualizar last_sync:', updateError);
+    } else {
+      console.log('✅ Timestamp de sincronização atualizado');
+    }
+
     return new Response(JSON.stringify({
       success: true,
       import: importData,
