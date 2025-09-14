@@ -275,6 +275,7 @@ export type Database = {
           name: string
           phone: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -285,6 +286,7 @@ export type Database = {
           name: string
           phone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -295,6 +297,7 @@ export type Database = {
           name?: string
           phone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -307,6 +310,8 @@ export type Database = {
           name: string
           phone: string | null
           specialty: string | null
+          tax_rate: number | null
+          tax_type: string | null
           updated_at: string
           user_id: string
         }
@@ -318,6 +323,8 @@ export type Database = {
           name: string
           phone?: string | null
           specialty?: string | null
+          tax_rate?: number | null
+          tax_type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -329,6 +336,8 @@ export type Database = {
           name?: string
           phone?: string | null
           specialty?: string | null
+          tax_rate?: number | null
+          tax_type?: string | null
           updated_at?: string
           user_id?: string
         }

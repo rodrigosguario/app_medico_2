@@ -21,6 +21,7 @@ import { useFinancialEvents } from '@/hooks/useFinancialEvents';
 import { AIAssistant } from '@/components/AIAssistant';
 import { AssistantButton } from '@/components/AssistantButton';
 import { useAIAssistant } from '@/hooks/useAIAssistant';
+import { useProfile } from '@/hooks/useProfile';
 import Navigation from '../components/Navigation';
 import { cn } from '@/lib/utils';
 import { FinancialTransactionDialog } from '@/components/FinancialTransactionDialog';
@@ -28,6 +29,7 @@ import { FinancialTransactionDialog } from '@/components/FinancialTransactionDia
 const FinancialPage: React.FC = () => {
   const { financialEvents, loading, error, createFinancialEvent, syncEventsToFinancial } = useFinancialEvents();
   const { isMinimized, isVisible, showAssistant, hideAssistant, toggleMinimized } = useAIAssistant();
+  const { profile } = useProfile();
   const [selectedPeriod, setSelectedPeriod] = useState('current_month');
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
 
@@ -88,7 +90,7 @@ const FinancialPage: React.FC = () => {
         by_category: expensesByCategory
       },
       net_income: revenue - expenses,
-      projected_taxes: revenue * 0.275 // Estimate 27.5% tax
+      projected_taxes: revenue * ((profile?.tax_rate || 6.00) / 100) // Use user's tax rate
     };
   };
 
@@ -359,7 +361,6 @@ const FinancialPage: React.FC = () => {
   }
 
   const revenuePercentage = summary.revenue.total > 0 ? (summary.revenue.confirmed / summary.revenue.total) * 100 : 0;
-  const taxRate = summary.revenue.total > 0 ? (summary.projected_taxes / summary.revenue.total) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -483,7 +484,10 @@ const FinancialPage: React.FC = () => {
                   {formatCurrency(summary.projected_taxes)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {taxRate.toFixed(1)}% da receita bruta
+                  {profile?.tax_type === 'sociedade_simples_limitada' 
+                    ? `Sociedade Simples Limitada (${profile?.tax_rate || 6}%)`
+                    : `${profile?.tax_type === 'mei' ? 'MEI' : 'Simples Nacional'} (${profile?.tax_rate || 6}%)`
+                  }
                 </div>
               </CardContent>
             </Card>

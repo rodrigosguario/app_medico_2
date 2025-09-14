@@ -11,6 +11,8 @@ interface Profile {
   crm?: string;
   specialty?: string;
   phone?: string;
+  tax_rate?: number;
+  tax_type?: string;
   created_at: string;
   updated_at: string;
 }

@@ -12,7 +12,8 @@ import { useAuth } from '@/components/AuthGuard';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Navigation from '../components/Navigation';
-import { User, Bell, Shield, Calendar, Database, Download, Trash2, Save } from 'lucide-react';
+import { User, Bell, Shield, Calendar, Database, Download, Trash2, Save, Building2 } from 'lucide-react';
+import HospitalManager from '../components/HospitalManager';
 
 const SettingsPage: React.FC = () => {
   const { profile } = useProfile();
@@ -25,7 +26,9 @@ const SettingsPage: React.FC = () => {
     email: '',
     crm: '',
     specialty: '',
-    phone: ''
+    phone: '',
+    tax_rate: 6.00,
+    tax_type: 'simples_nacional'
   });
 
   const [notifications, setNotifications] = useState(() => {
@@ -53,7 +56,9 @@ const SettingsPage: React.FC = () => {
         email: profile.email || user?.email || '',
         crm: profile.crm || '',
         specialty: profile.specialty || '',
-        phone: profile.phone || ''
+        phone: profile.phone || '',
+        tax_rate: profile.tax_rate || 6.00,
+        tax_type: profile.tax_type || 'simples_nacional'
       });
     }
   }, [profile, user]);
@@ -83,6 +88,8 @@ const SettingsPage: React.FC = () => {
           crm: profileForm.crm,
           specialty: profileForm.specialty,
           phone: profileForm.phone,
+          tax_rate: profileForm.tax_rate,
+          tax_type: profileForm.tax_type,
         });
 
       if (error) throw error;
@@ -135,7 +142,7 @@ const SettingsPage: React.FC = () => {
           </div>
 
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Perfil
@@ -143,6 +150,10 @@ const SettingsPage: React.FC = () => {
               <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="h-4 w-4" />
                 Notificações
+              </TabsTrigger>
+              <TabsTrigger value="hospitals" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Hospitais
               </TabsTrigger>
               <TabsTrigger value="calendar" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -208,6 +219,49 @@ const SettingsPage: React.FC = () => {
                       />
                     </div>
                   </div>
+                  
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium mb-4">Configurações Fiscais</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tax_type">Tipo de Tributação</Label>
+                        <Select 
+                          value={profileForm.tax_type} 
+                          onValueChange={(value) => setProfileForm(prev => ({ ...prev, tax_type: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
+                            <SelectItem value="sociedade_simples_limitada">Sociedade Simples Limitada</SelectItem>
+                            <SelectItem value="mei">MEI</SelectItem>
+                            <SelectItem value="other">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tax_rate">Taxa de Imposto (%)</Label>
+                        <Input
+                          id="tax_rate"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={profileForm.tax_rate}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, tax_rate: parseFloat(e.target.value) || 0 }))}
+                          placeholder="6.00"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {profileForm.tax_type === 'sociedade_simples_limitada' 
+                            ? 'Taxa personalizada para sua Sociedade Simples Limitada'
+                            : 'Taxa de imposto sobre o faturamento bruto'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <Button onClick={handleProfileSave} disabled={isLoading}>
                     {isLoading ? 'Salvando...' : 'Salvar Alterações'}
                   </Button>
@@ -266,6 +320,10 @@ const SettingsPage: React.FC = () => {
                   </Button>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="hospitals" className="space-y-6">
+              <HospitalManager />
             </TabsContent>
 
             <TabsContent value="calendar" className="space-y-6">
