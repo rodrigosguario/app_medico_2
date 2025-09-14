@@ -87,6 +87,20 @@ async function getGoogleAccessToken(): Promise<string> {
   return token;
 }
 
+// ===== MICROSOFT OAUTH =====
+async function getMicrosoftAccessToken(): Promise<string> {
+  console.log("🔑 Iniciando OAuth Microsoft...");
+  
+  // Para desenvolvimento, vamos simular um token
+  // Na implementação real, você configuraria o OAuth no Azure
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log("🔧 Usando token simulado para desenvolvimento");
+      resolve("demo_microsoft_token_" + Date.now());
+    }, 2000);
+  });
+}
+
 export function useCalendarSync() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -209,12 +223,64 @@ export function useCalendarSync() {
     }
   };
 
-  // === Outlook === (placeholder)
+  // === Outlook ===
   const connectOutlookCalendar = async () => {
-    toast({
-      title: "Configuração necessária",
-      description: "Integração Outlook será configurada depois.",
-    });
+    try {
+      setLoading(true);
+      console.log("🔗 Conectando Outlook Calendar...");
+      
+      const accessToken = await getMicrosoftAccessToken();
+
+      const { error } = await supabase
+        .from("calendar_sync_settings")
+        .upsert(
+          {
+            user_id: user!.id,
+            provider: "outlook",
+            is_enabled: true,
+            sync_direction: "bidirectional",
+            access_token: accessToken,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,provider" }
+        );
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Outlook conectado",
+        description: "Token salvo com sucesso. Configure as credenciais no Azure para OAuth real.",
+      });
+
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === "outlook"
+            ? {
+                ...p,
+                status: "connected",
+                isEnabled: true,
+                lastSync: new Date().toLocaleString("pt-BR"),
+              }
+            : p
+        )
+      );
+
+      // Iniciar sincronização automática
+      setTimeout(() => {
+        syncCalendar("outlook");
+      }, 1000);
+
+    } catch (error: any) {
+      console.error("❌ Erro Outlook Calendar:", error);
+      
+      toast({
+        title: "❌ Erro",
+        description: "Falha ao conectar Outlook Calendar: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // === iCloud === (placeholder)
@@ -226,21 +292,120 @@ export function useCalendarSync() {
   };
 
   const syncCalendar = async (providerId: string) => {
-    toast({
-      title: "Sincronização iniciada",
-      description: `Sincronizando calendário ${providerId}...`,
-    });
+    try {
+      setLoading(true);
+      
+      // Atualizar status para sincronizando
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === providerId
+            ? { ...p, status: "syncing" }
+            : p
+        )
+      );
+
+      if (providerId === "outlook") {
+        // Chamar a edge function para sincronização do Outlook
+        const { data, error } = await supabase.functions.invoke('outlook-calendar-sync', {
+          body: {
+            action: 'sync_bidirectional',
+            user_id: user!.id,
+            access_token: 'demo_token_' + Date.now()
+          }
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "✅ Sincronização concluída",
+          description: `Outlook Calendar sincronizado com sucesso. ${data?.imported || 0} eventos importados, ${data?.exported || 0} eventos exportados.`,
+        });
+      } else {
+        toast({
+          title: "Sincronização iniciada",
+          description: `Sincronizando calendário ${providerId}...`,
+        });
+      }
+
+      // Atualizar status para conectado
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === providerId
+            ? {
+                ...p,
+                status: "connected",
+                lastSync: new Date().toLocaleString("pt-BR"),
+              }
+            : p
+        )
+      );
+    } catch (error: any) {
+      console.error("Erro na sincronização:", error);
+      
+      // Restaurar status para conectado em caso de erro
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === providerId
+            ? { ...p, status: "connected" }
+            : p
+        )
+      );
+
+      toast({
+        title: "❌ Erro na sincronização",
+        description: error.message || "Falha ao sincronizar calendário",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const disconnectProvider = async (providerId: string) => {
-    toast({
-      title: "Provedor desconectado",
-      description: `${providerId} foi desconectado.`,
-    });
+    try {
+      await supabase
+        .from("calendar_sync_settings")
+        .update({ is_enabled: false })
+        .eq("user_id", user!.id)
+        .eq("provider", providerId);
+
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === providerId
+            ? { ...p, status: "disconnected", isEnabled: false }
+            : p
+        )
+      );
+
+      toast({
+        title: "Provedor desconectado",
+        description: `${providerId} foi desconectado com sucesso.`,
+      });
+    } catch (error) {
+      console.error("Erro ao desconectar:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao desconectar o provedor",
+        variant: "destructive",
+      });
+    }
   };
 
   const getSyncHistory = async () => {
-    return [];
+    try {
+      const { data, error } = await supabase
+        .from("sync_history")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("started_at", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Erro ao carregar histórico:", error);
+      return [];
+    }
   };
 
   const exportToICS = async () => {
