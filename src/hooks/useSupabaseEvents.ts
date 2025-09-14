@@ -76,15 +76,31 @@ export const useSupabaseEvents = () => {
       }
 
       // Get user's default calendar
-      const { data: calendar } = await supabase
+      let { data: calendar } = await supabase
         .from('calendars')
         .select('id')
         .eq('user_id', user.data.user.id)
         .eq('is_active', true)
         .single();
 
+      // If no active calendar exists, create a default one
       if (!calendar) {
-        throw new Error('Nenhum calendário encontrado para o usuário');
+        const { data: newCalendar, error: createError } = await supabase
+          .from('calendars')
+          .insert([{
+            user_id: user.data.user.id,
+            name: 'Meu Calendário',
+            description: 'Calendário padrão',
+            color: '#3B82F6',
+            is_active: true
+          }])
+          .select('id')
+          .single();
+
+        if (createError) {
+          throw new Error('Erro ao criar calendário padrão: ' + createError.message);
+        }
+        calendar = newCalendar;
       }
 
       const fullEventData = {

@@ -42,7 +42,30 @@ export const useCalendars = () => {
       if (supabaseError) throw supabaseError;
 
       if (data) {
-        setCalendars(data);
+        // If no calendars exist, create a default one
+        if (data.length === 0) {
+          const { data: newCalendar, error: createError } = await supabase
+            .from('calendars')
+            .insert([{
+              user_id: user.id,
+              name: 'Meu Calendário',
+              description: 'Calendário padrão',
+              color: '#3B82F6',
+              is_active: true
+            }])
+            .select('*')
+            .single();
+
+          if (createError) {
+            throw createError;
+          }
+          
+          if (newCalendar) {
+            setCalendars([newCalendar]);
+          }
+        } else {
+          setCalendars(data);
+        }
       }
     } catch (error) {
       console.error('Error loading calendars:', error);
