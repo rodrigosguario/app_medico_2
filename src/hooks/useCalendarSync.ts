@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/components/AuthGuard";
 
+// Declaração de tipos para Google Identity Services
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: any) => any;
+        };
+      };
+    };
+  }
+}
+
 type Provider = {
   id: string;
   name: string;
@@ -28,26 +41,47 @@ function loadGoogleScript(): Promise<void> {
 }
 
 async function getGoogleAccessToken(): Promise<string> {
-  // Use o Client ID diretamente - será configurado no Google Cloud Console
-  const clientId = "YOUR_GOOGLE_CLIENT_ID"; // Substitua pelo seu Client ID real
-  if (!clientId) throw new Error("Google Client ID não configurado");
+  // IMPORTANTE: Configure seu Client ID real aqui
+  // Obtenha em: https://console.cloud.google.com/apis/credentials
+  const clientId = "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com"; // SUBSTITUA pelo seu Client ID real
+  
+  if (!clientId || clientId.includes("YOUR_GOOGLE") || clientId.includes("1234567890")) {
+    throw new Error("⚠️ Configure o Google Client ID real no código! Veja docs/google-oauth-setup.md");
+  }
+
+  console.log("🔑 Iniciando OAuth com Client ID:", clientId.substring(0, 20) + "...");
 
   await loadGoogleScript();
-  // @ts-ignore
-  const tokenClient = google.accounts.oauth2.initTokenClient({
+  
+  // Verificar se o Google API está carregado
+  if (typeof window.google === 'undefined' || !window.google.accounts) {
+    throw new Error("Google API não carregou corretamente");
+  }
+
+  const tokenClient = window.google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope:
-      "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email",
+    scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email",
     prompt: "consent",
+    callback: "", // Será definido no requestAccessToken
   });
 
   const token = await new Promise<string>((resolve, reject) => {
-    tokenClient.requestAccessToken({
-      callback: (resp: any) => {
-        if (resp && resp.access_token) resolve(resp.access_token);
-        else reject(new Error("Falha ao obter access_token do Google"));
-      },
-    });
+    tokenClient.callback = (resp: any) => {
+      console.log("📋 Resposta OAuth:", resp);
+      if (resp && resp.access_token) {
+        console.log("✅ Token obtido com sucesso");
+        resolve(resp.access_token);
+      } else if (resp.error) {
+        console.error("❌ Erro OAuth:", resp);
+        reject(new Error(`OAuth Error: ${resp.error} - ${resp.error_description || ''}`));
+      } else {
+        console.error("❌ Resposta OAuth inválida:", resp);
+        reject(new Error("Falha ao obter access_token do Google"));
+      }
+    };
+    
+    console.log("🚀 Solicitando token de acesso...");
+    tokenClient.requestAccessToken();
   });
 
   return token;
@@ -118,6 +152,8 @@ export function useCalendarSync() {
   const connectGoogleCalendar = async () => {
     try {
       setLoading(true);
+      console.log("🔗 Conectando Google Calendar...");
+      
       const accessToken = await getGoogleAccessToken();
 
       const { error } = await supabase
@@ -137,8 +173,8 @@ export function useCalendarSync() {
       if (error) throw error;
 
       toast({
-        title: "Google conectado",
-        description: "Permissões concedidas e token salvo.",
+        title: "✅ Google conectado",
+        description: "Permissões concedidas e token salvo com sucesso.",
       });
 
       setProviders((prev) =>
@@ -154,10 +190,18 @@ export function useCalendarSync() {
         )
       );
     } catch (error: any) {
-      console.error("Erro Google Calendar:", error);
+      console.error("❌ Erro Google Calendar:", error);
+      
+      let errorMessage = "Falha ao conectar Google Calendar";
+      if (error.message.includes("Configure o Google Client ID")) {
+        errorMessage = "Configure o Google Client ID no código primeiro!";
+      } else if (error.message.includes("OAuth Error")) {
+        errorMessage = "Erro de autenticação OAuth. Verifique a configuração no Google Cloud Console.";
+      }
+      
       toast({
-        title: "Erro",
-        description: error.message ?? "Falha ao conectar Google",
+        title: "❌ Erro",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

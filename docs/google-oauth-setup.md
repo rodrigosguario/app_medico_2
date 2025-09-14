@@ -1,59 +1,82 @@
-# Configuração Google OAuth - Resolução do Erro de Verificação
+# Configuração Google OAuth - Resolução do Erro 400
 
-## Problema
-O erro "Acesso bloqueado: o app app-medico-2.vercel.app não concluiu o processo de verificação do Google" ocorre quando os domínios não estão autorizados no Google Cloud Console.
+## ❌ Problema Atual
+**Error 400: Solicitação inválida** - Isso acontece porque:
+1. Client ID está como placeholder (`YOUR_GOOGLE_CLIENT_ID`)
+2. Domínios não autorizados no Google Cloud Console
+3. Configuração OAuth incompleta
 
-## Solução
+## ✅ Solução Completa
 
-### 1. Configure no Google Cloud Console
+### 1. Configure o Google Cloud Console
 
-1. Acesse o [Google Cloud Console](https://console.cloud.google.com)
-2. Vá em **APIs & Services** > **Credentials**
-3. Selecione seu OAuth 2.0 Client ID ou crie um novo
-4. Adicione os seguintes domínios:
+1. **Acesse**: [Google Cloud Console](https://console.cloud.google.com)
+2. **Crie/Selecione** um projeto
+3. **Ative** a Google Calendar API:
+   - Vá em **APIs & Services** > **Library**
+   - Busque "Google Calendar API" e ative
 
-**Authorized JavaScript origins:**
+4. **Configure OAuth Consent Screen**:
+   - Vá em **APIs & Services** > **OAuth consent screen**
+   - Escolha **External** (para usuários fora da organização)
+   - Preencha nome do app, email de suporte
+   - Adicione domínios autorizados:
+     - `f718139e-0921-4562-b04f-6519c248b00c.sandbox.lovable.dev`
+     - `app-medico-2.vercel.app` (se usando Vercel)
+
+5. **Crie Credentials**:
+   - Vá em **APIs & Services** > **Credentials**
+   - Clique **Create Credentials** > **OAuth 2.0 Client ID**
+   - Tipo: **Web application**
+   
+   **Authorized JavaScript origins:**
+   ```
+   https://f718139e-0921-4562-b04f-6519c248b00c.sandbox.lovable.dev
+   https://app-medico-2.vercel.app
+   http://localhost:8080
+   ```
+   
+   **Authorized redirect URIs:**
+   ```
+   https://f718139e-0921-4562-b04f-6519c248b00c.sandbox.lovable.dev
+   https://app-medico-2.vercel.app
+   http://localhost:8080
+   ```
+
+### 2. 🔑 Obtenha e Configure o Client ID
+
+Após criar as credentials, você receberá um **Client ID** similar a:
 ```
-https://app-medico-2.vercel.app
-https://f718139e-0921-4562-b04f-6519c248b00c.sandbox.lovable.dev
-http://localhost:8080
+1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com
 ```
 
-**Authorized redirect URIs:**
-```
-https://app-medico-2.vercel.app
-https://f718139e-0921-4562-b04f-6519c248b00c.sandbox.lovable.dev
-http://localhost:8080
-```
+**Configure no código:**
+1. Abra `src/hooks/useCalendarSync.ts`
+2. Substitua na linha ~32:
+   ```javascript
+   const clientId = "SEU_CLIENT_ID_AQUI.apps.googleusercontent.com";
+   ```
 
-### 2. Configure o Client ID no Código
+### 3. 🧪 Teste a Configuração
 
-No arquivo `src/hooks/useCalendarSync.ts`, substitua `YOUR_GOOGLE_CLIENT_ID` pelo seu Client ID real:
+1. Reinicie a aplicação
+2. Tente conectar o Google Calendar
+3. Se der erro, verifique os logs no console do navegador
 
-```javascript
-const clientId = "SUA_GOOGLE_CLIENT_ID_AQUI.apps.googleusercontent.com";
-```
+### 4. 🔧 Troubleshooting
 
-### 3. Configuração do Supabase (se usar backend)
+**Se ainda der erro 400:**
+- Verifique se o Client ID foi copiado corretamente
+- Confirme que os domínios estão exatamente como listados acima
+- Aguarde alguns minutos para as mudanças propagarem
+- Teste em modo incógnito do navegador
 
-Se estiver usando Supabase, configure também:
-1. No Supabase Dashboard > Authentication > Providers
-2. Ative o Google provider
-3. Adicione o Client ID e Client Secret
+**Logs úteis:**
+- Abra o console do navegador (F12)
+- Procure por mensagens que começam com 🔑, ❌, ✅
 
-### 4. Scopes Necessários
+### 5. 📚 Links Úteis
 
-Os scopes já configurados são:
-- `https://www.googleapis.com/auth/calendar` - Acesso ao calendário
-- `https://www.googleapis.com/auth/userinfo.email` - Email do usuário
-
-### 5. Testes
-
-Para testar em desenvolvimento local:
-1. Use `http://localhost:8080` nos domínios autorizados
-2. Teste em produção com `app-medico-2.vercel.app`
-
-## Documentação Adicional
-
-- [Google OAuth 2.0 Setup](https://developers.google.com/identity/oauth2/web/setup)
-- [Google Calendar API](https://developers.google.com/calendar/api/quickstart/js)
+- [Google OAuth Setup](https://developers.google.com/identity/oauth2/web/setup)
+- [Google Calendar API Quickstart](https://developers.google.com/calendar/api/quickstart/js)
+- [OAuth Consent Screen](https://support.google.com/cloud/answer/10311615)
