@@ -1,6 +1,6 @@
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useImprovedFeedbackToast } from '@/components/ImprovedFeedbackToast';
 import { useAuth } from "@/components/AuthGuard";
 
 // Declaração de tipos para Google Identity Services
@@ -148,7 +148,7 @@ async function getMicrosoftAccessToken(): Promise<string> {
 
 export function useCalendarSync() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const feedbackToast = useImprovedFeedbackToast();
   const [loading, setLoading] = React.useState(false);
   const [providers, setProviders] = React.useState<Provider[]>([
     {
@@ -237,10 +237,10 @@ export function useCalendarSync() {
 
       if (error) throw error;
 
-      toast({
-        title: "✅ Google conectado",
-        description: "Permissões concedidas e token salvo com sucesso.",
-      });
+      feedbackToast.success(
+        "Google conectado",
+        "Permissões concedidas e token salvo com sucesso."
+      );
 
       setProviders((prev) =>
         prev.map((p) =>
@@ -264,11 +264,10 @@ export function useCalendarSync() {
         errorMessage = "Erro de autenticação OAuth. Verifique a configuração no Google Cloud Console.";
       }
       
-      toast({
-        title: "❌ Erro",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      feedbackToast.error(
+        "Erro",
+        errorMessage
+      );
     } finally {
       setLoading(false);
     }
@@ -298,10 +297,10 @@ export function useCalendarSync() {
 
       if (error) throw error;
 
-      toast({
-        title: "✅ Outlook conectado",
-        description: "Token salvo com sucesso. Configure as credenciais no Azure para OAuth real.",
-      });
+      feedbackToast.success(
+        "Outlook conectado",
+        "Token salvo com sucesso. Configure as credenciais no Azure para OAuth real."
+      );
 
       setProviders((prev) =>
         prev.map((p) =>
@@ -324,11 +323,10 @@ export function useCalendarSync() {
     } catch (error: any) {
       console.error("❌ Erro Outlook Calendar:", error);
       
-      toast({
-        title: "❌ Erro",
-        description: "Falha ao conectar Outlook Calendar: " + error.message,
-        variant: "destructive",
-      });
+      feedbackToast.error(
+        "Erro",
+        "Falha ao conectar Outlook Calendar: " + error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -364,10 +362,10 @@ export function useCalendarSync() {
 
       if (error) throw error;
 
-      toast({
-        title: "✅ iCloud conectado",
-        description: "Credenciais configuradas. Use uma senha de app específica gerada em appleid.apple.com",
-      });
+      feedbackToast.success(
+        "iCloud conectado",
+        "Credenciais configuradas. Use uma senha de app específica gerada em appleid.apple.com"
+      );
 
       setProviders((prev) =>
         prev.map((p) =>
@@ -390,11 +388,10 @@ export function useCalendarSync() {
     } catch (error: any) {
       console.error("❌ Erro iCloud Calendar:", error);
       
-      toast({
-        title: "❌ Erro",
-        description: "Falha ao conectar iCloud Calendar: " + error.message,
-        variant: "destructive",
-      });
+      feedbackToast.error(
+        "Erro",
+        "Falha ao conectar iCloud Calendar: " + error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -412,41 +409,6 @@ export function useCalendarSync() {
             : p
         )
       );
-
-      if (providerId === "outlook") {
-        // Buscar o token de acesso do banco
-        const { data: syncSettings } = await supabase
-          .from('calendar_sync_settings')
-          .select('access_token')
-          .eq('user_id', user!.id)
-          .eq('provider', 'outlook')
-          .single();
-
-        const accessToken = syncSettings?.access_token || 'demo_token_' + Date.now();
-
-        // Chamar a edge function para sincronização do Outlook
-        const { data, error } = await supabase.functions.invoke('outlook-calendar-sync', {
-          body: {
-            action: 'sync_bidirectional',
-            userId: user!.id,
-            outlookAccessToken: accessToken
-          }
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: "✅ Sincronização concluída",
-          description: data?.message || `Outlook Calendar sincronizado com sucesso. ${data?.import?.imported || 0} eventos importados, ${data?.export?.exported || 0} eventos exportados.`,
-        });
-      } else if (providerId === "icloud") {
-        // Buscar credenciais do banco
-        const { data: syncSettings } = await supabase
-          .from('calendar_sync_settings')
-          .select('access_token')
-          .eq('user_id', user!.id)
-          .eq('provider', 'icloud')
-          .single();
 
       // Chamar a edge function para sincronização do Outlook
       if (providerId === 'outlook') {
@@ -537,11 +499,10 @@ export function useCalendarSync() {
         )
       );
 
-      toast({
-        title: "❌ Erro na sincronização",
-        description: error.message || "Falha ao sincronizar calendário",
-        variant: "destructive",
-      });
+      feedbackToast.error(
+        "Erro na sincronização",
+        error.message || "Falha ao sincronizar calendário"
+      );
     } finally {
       setLoading(false);
     }
@@ -573,17 +534,16 @@ export function useCalendarSync() {
         )
       );
 
-      toast({
-        title: "✅ Desconectado",
-        description: `${providerId} foi desconectado com sucesso.`,
-      });
+      feedbackToast.info(
+        "Desconectado",
+        `${providerId} foi desconectado com sucesso.`
+      );
     } catch (error) {
       console.error("❌ Erro ao desconectar:", error);
-      toast({
-        title: "❌ Erro",
-        description: "Falha ao desconectar o provedor",
-        variant: "destructive",
-      });
+      feedbackToast.error(
+        "Erro",
+        "Falha ao desconectar o provedor"
+      );
     } finally {
       setLoading(false);
     }
@@ -607,10 +567,10 @@ export function useCalendarSync() {
   };
 
   const exportToICS = async () => {
-    toast({
-      title: "Exportação iniciada",
-      description: "Gerando arquivo ICS...",
-    });
+    feedbackToast.info(
+      "Exportação iniciada",
+      "Gerando arquivo ICS..."
+    );
   };
 
   return {
