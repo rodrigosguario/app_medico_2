@@ -328,12 +328,70 @@ export function useCalendarSync() {
     }
   };
 
-  // === iCloud === (placeholder)
+  // === iCloud ===
   const connectIcloudCalendar = async () => {
-    toast({
-      title: "Não implementado",
-      description: "Integração com iCloud ainda não foi implementada.",
-    });
+    try {
+      setLoading(true);
+      console.log("🔗 Conectando iCloud Calendar...");
+      
+      // Para iCloud, precisamos de credenciais de app específicas
+      const appleId = prompt("Digite seu Apple ID:");
+      const appPassword = prompt("Digite sua senha de app específica do iCloud:\n(Configure em appleid.apple.com > Segurança > Senhas de app)");
+      
+      if (!appleId || !appPassword) {
+        throw new Error("Apple ID e senha de app são obrigatórios");
+      }
+
+      const { error } = await supabase
+        .from("calendar_sync_settings")
+        .upsert(
+          {
+            user_id: user!.id,
+            provider: "icloud",
+            is_enabled: true,
+            sync_direction: "bidirectional",
+            access_token: btoa(`${appleId}:${appPassword}`), // Base64 encode for Basic Auth
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,provider" }
+        );
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ iCloud conectado",
+        description: "Credenciais configuradas. Use uma senha de app específica gerada em appleid.apple.com",
+      });
+
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === "icloud"
+            ? {
+                ...p,
+                status: "connected",
+                isEnabled: true,
+                lastSync: new Date().toLocaleString("pt-BR"),
+              }
+            : p
+        )
+      );
+
+      // Iniciar sincronização automática
+      setTimeout(() => {
+        syncCalendar("icloud");
+      }, 1000);
+
+    } catch (error: any) {
+      console.error("❌ Erro iCloud Calendar:", error);
+      
+      toast({
+        title: "❌ Erro",
+        description: "Falha ao conectar iCloud Calendar: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const syncCalendar = async (providerId: string) => {
@@ -374,6 +432,32 @@ export function useCalendarSync() {
         toast({
           title: "✅ Sincronização concluída",
           description: data?.message || `Outlook Calendar sincronizado com sucesso. ${data?.import?.imported || 0} eventos importados, ${data?.export?.exported || 0} eventos exportados.`,
+        });
+      } else if (providerId === "icloud") {
+        // Buscar credenciais do banco
+        const { data: syncSettings } = await supabase
+          .from('calendar_sync_settings')
+          .select('access_token')
+          .eq('user_id', user!.id)
+          .eq('provider', 'icloud')
+          .single();
+
+        const credentials = syncSettings?.access_token || btoa('demo:demo');
+
+        // Chamar a edge function para sincronização do iCloud
+        const { data, error } = await supabase.functions.invoke('icloud-calendar-sync', {
+          body: {
+            action: 'sync_bidirectional',
+            userId: user!.id,
+            credentials: credentials
+          }
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "✅ Sincronização concluída",
+          description: data?.message || `iCloud Calendar sincronizado com sucesso. ${data?.import?.imported || 0} eventos importados, ${data?.export?.exported || 0} eventos exportados.`,
         });
       } else {
         toast({

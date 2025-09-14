@@ -32,6 +32,7 @@ export const CalendarSync: React.FC = () => {
     loading, 
     connectGoogleCalendar, 
     connectOutlookCalendar,
+    connectIcloudCalendar,
     syncCalendar,
     disconnectProvider,
     getSyncHistory,
@@ -98,6 +99,8 @@ export const CalendarSync: React.FC = () => {
         await connectGoogleCalendar();
       } else if (providerId === 'outlook') {
         await connectOutlookCalendar();
+      } else if (providerId === 'icloud') {
+        await connectIcloudCalendar();
       } else {
         toast({
           title: 'Em desenvolvimento',
