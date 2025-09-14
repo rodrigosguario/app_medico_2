@@ -28,8 +28,9 @@ function loadGoogleScript(): Promise<void> {
 }
 
 async function getGoogleAccessToken(): Promise<string> {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
-  if (!clientId) throw new Error("VITE_GOOGLE_CLIENT_ID ausente");
+  // Use o Client ID diretamente - será configurado no Google Cloud Console
+  const clientId = "YOUR_GOOGLE_CLIENT_ID"; // Substitua pelo seu Client ID real
+  if (!clientId) throw new Error("Google Client ID não configurado");
 
   await loadGoogleScript();
   // @ts-ignore
