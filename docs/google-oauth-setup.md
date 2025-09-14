@@ -63,13 +63,31 @@ Após criar as credentials, você receberá um **Client ID** similar a:
 2. Tente conectar o Google Calendar
 3. Se der erro, verifique os logs no console do navegador
 
-### 4. 🔧 Troubleshooting
+### 4. 📋 Configure Usuários de Teste
 
-**Se ainda der erro 400:**
+**IMPORTANTE**: Aplicações Google OAuth começam em modo "Testing" por padrão.
+
+1. **Vá em OAuth Consent Screen**
+2. **Na seção "Test users"**, clique **"ADD USERS"**
+3. **Adicione seu email** (o mesmo que você usa para testar)
+4. **Salve as alterações**
+
+**OU para uso público:**
+1. **Mude o status para "In production"**
+2. **Isso pode exigir verificação do Google** para alguns escopos
+
+### 5. 🔧 Troubleshooting
+
+**Se der erro 400 (invalid_request):**
 - Verifique se o Client ID foi copiado corretamente
 - Confirme que os domínios estão exatamente como listados acima
 - Aguarde alguns minutos para as mudanças propagarem
 - Teste em modo incógnito do navegador
+
+**Se der erro 403 (access_denied) - "Acesso bloqueado":**
+- Adicione seu email como usuário de teste (seção acima)
+- OU mude o app para "In production" no OAuth Consent Screen
+- Aguarde alguns minutos e tente novamente
 
 **Logs úteis:**
 - Abra o console do navegador (F12)
