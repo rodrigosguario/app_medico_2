@@ -13,7 +13,9 @@ import FinancialPage from "./pages/FinancialPage";
 import ImportExportPage from "./pages/ImportExportPage";
 import OfflinePage from "./pages/OfflinePage";
 import SettingsPage from "./pages/SettingsPage";
+import TestPage from "./pages/TestPage";
 import NotFound from "./pages/NotFound";
+import { MobileOptimization } from '@/components/MobileOptimization';
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
+        <MobileOptimization />
         <Toaster />
         <Sonner />
         {/* NÃO use BrowserRouter aqui. O Router já está em main.tsx (HashRouter). */}
@@ -32,6 +35,7 @@ const App = () => (
             <Route path="/import-export" element={<ImportExportPage />} />
             <Route path="/offline" element={<OfflinePage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/test" element={<TestPage />} />
             {/* catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,30 +1,20 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.322e3a2982204e7faf6ee8ea5b4119be',
-  appName: 'planton-sync',
+  appId: 'app.lovable.f718139e09214562b04f6519c248b00c',
+  appName: 'agenda-medica-app',
   webDir: 'dist',
   server: {
-    url: 'https://322e3a29-8220-4e7f-af6e-e8ea5b4119be.lovableproject.com?forceHideBadge=true',
+    url: 'https://f718139e-0921-4562-b04f-6519c248b00c.lovableproject.com?forceHideBadge=true',
     cleartext: true
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      launchAutoHide: true,
-      backgroundColor: "#ffffffff",
-      androidSplashResourceName: "splash",
-      androidScaleType: "CENTER_CROP",
-      showSpinner: false,
-      androidSpinnerStyle: "large",
-      iosSpinnerStyle: "small",
-      spinnerColor: "#999999",
-      splashFullScreen: true,
-      splashImmersive: true,
-      layoutName: "launch_screen",
-      useDialog: true,
-    },
-  },
+      backgroundColor: '#ffffff',
+      showSpinner: false
+    }
+  }
 };
 
 export default config;

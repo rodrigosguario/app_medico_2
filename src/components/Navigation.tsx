@@ -8,7 +8,8 @@ import {
   Settings, 
   LogOut,
   Stethoscope,
-  Plus
+  Plus,
+  TestTube
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +76,12 @@ const Navigation: React.FC = () => {
       path: '/offline',
       icon: WifiOff,
       color: 'muted'
+    },
+    {
+      name: 'Testes',
+      path: '/test',
+      icon: TestTube,
+      color: 'secondary'
     }
   ];
 
@@ -104,14 +111,14 @@ const Navigation: React.FC = () => {
             </div>
             
             {/* Actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <Button 
                 size="sm" 
                 className="bg-medical hover:bg-medical-dark text-medical-foreground"
                 onClick={() => navigate('/calendar?action=new')}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Evento
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Evento</span>
               </Button>
               
               <ConnectionStatus isOnline={isOnline} />
@@ -147,6 +154,13 @@ const Navigation: React.FC = () => {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configurações</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="cursor-pointer"
+                    onClick={() => navigate('/test')}
+                  >
+                    <TestTube className="mr-2 h-4 w-4" />
+                    <span>Testes do Sistema</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer text-destructive" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sair</span>
@@ -160,18 +174,25 @@ const Navigation: React.FC = () => {
 
       {/* Navigation */}
       <nav className="bg-card border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+          <div className="flex overflow-x-auto scrollbar-hide space-x-2 sm:space-x-8 py-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  className={getNavItemClasses(item.path, item.color)}
+                  className={({ isActive }) => 
+                    `flex items-center space-x-2 px-3 py-2 sm:py-4 border-b-2 font-medium text-sm relative transition-colors whitespace-nowrap ${
+                      isActive 
+                        ? `border-${item.color} text-${item.color}` 
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                    }`
+                  }
                 >
                   <Icon className="h-4 w-4" />
-                  <span>{item.name}</span>
+                  <span className="hidden sm:inline">{item.name}</span>
+                  <span className="sm:hidden text-xs">{item.name.split(' ')[0]}</span>
                   {item.badge && (
                     <Badge variant="secondary" className="text-xs">
                       {item.badge}
