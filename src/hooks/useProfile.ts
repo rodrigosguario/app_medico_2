@@ -34,9 +34,12 @@ export const useProfile = () => {
           .from('profiles')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code === 'PGRST116') {
+        if (error) {
+          console.error('Error fetching profile:', error);
+          setError(error.message);
+        } else if (!data) {
           // Profile doesn't exist, create it using auth metadata
           console.log('Profile not found, creating from auth metadata...');
           
@@ -61,9 +64,6 @@ export const useProfile = () => {
             console.log('Profile created successfully');
             setProfile(newProfile);
           }
-        } else if (error) {
-          console.error('Error fetching profile:', error);
-          setError(error.message);
         } else {
           setProfile(data);
         }
