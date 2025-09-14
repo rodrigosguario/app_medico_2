@@ -352,6 +352,23 @@ async function syncBidirectional(supabase: any, accessToken: string, userId: str
   console.log('Starting bidirectional sync for user:', userId);
   
   try {
+    // Criar registro no histórico
+    const { data: historyRecord, error: historyError } = await supabase
+      .from('sync_history')
+      .insert({
+        user_id: userId,
+        provider: 'outlook',
+        sync_type: 'bidirectional',
+        sync_status: 'running',
+        started_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (historyError) {
+      console.error('❌ Erro ao criar registro no histórico:', historyError);
+    }
+
     // First import from Outlook Calendar
     const importResult = await importOutlookCalendarEvents(supabase, accessToken, userId);
     const importData = await importResult.json();
@@ -376,6 +393,24 @@ async function syncBidirectional(supabase: any, accessToken: string, userId: str
       console.log('✅ Timestamp de sincronização atualizado');
     }
 
+    // Atualizar histórico como concluído
+    if (historyRecord?.id) {
+      await supabase
+        .from('sync_history')
+        .update({
+          sync_status: 'completed',
+          completed_at: new Date().toISOString(),
+          events_processed: (importData.imported || 0) + (exportData.exported || 0),
+          events_succeeded: (importData.imported || 0) + (exportData.exported || 0),
+          events_failed: (importData.errors || 0) + (exportData.errors || 0),
+          details: {
+            import: importData,
+            export: exportData
+          }
+        })
+        .eq('id', historyRecord.id);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       import: importData,
@@ -386,6 +421,19 @@ async function syncBidirectional(supabase: any, accessToken: string, userId: str
     });
   } catch (error) {
     console.error('Error in bidirectional sync:', error);
+    
+    // Atualizar histórico como erro
+    if (historyRecord?.id) {
+      await supabase
+        .from('sync_history')
+        .update({
+          sync_status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: error.message
+        })
+        .eq('id', historyRecord.id);
+    }
+    
     throw error;
   }
 }

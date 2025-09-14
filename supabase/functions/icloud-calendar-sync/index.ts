@@ -226,7 +226,28 @@ async function exportEventsToIcloudCalendar(supabase: any, credentials: string, 
 async function syncBidirectional(supabase: any, credentials: string, userId: string) {
   console.log('Starting bidirectional iCloud sync for user:', userId);
   
+  let historyRecord: any = null;
+  
   try {
+    // Criar registro no histórico
+    const { data: newHistoryRecord, error: historyError } = await supabase
+      .from('sync_history')
+      .insert({
+        user_id: userId,
+        provider: 'icloud',
+        sync_type: 'bidirectional',
+        sync_status: 'running',
+        started_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    historyRecord = newHistoryRecord;
+
+    if (historyError) {
+      console.error('❌ Erro ao criar registro no histórico:', historyError);
+    }
+
     // First import from iCloud Calendar
     const importResult = await importIcloudCalendarEvents(supabase, credentials, userId);
     const importData = await importResult.json();
@@ -251,6 +272,24 @@ async function syncBidirectional(supabase: any, credentials: string, userId: str
       console.log('✅ Timestamp de sincronização atualizado para iCloud');
     }
 
+    // Atualizar histórico como concluído
+    if (historyRecord?.id) {
+      await supabase
+        .from('sync_history')
+        .update({
+          sync_status: 'completed',
+          completed_at: new Date().toISOString(),
+          events_processed: (importData.imported || 0) + (exportData.exported || 0),
+          events_succeeded: (importData.imported || 0) + (exportData.exported || 0),
+          events_failed: (importData.errors || 0) + (exportData.errors || 0),
+          details: {
+            import: importData,
+            export: exportData
+          }
+        })
+        .eq('id', historyRecord.id);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       import: importData,
@@ -261,9 +300,21 @@ async function syncBidirectional(supabase: any, credentials: string, userId: str
     });
   } catch (error) {
     console.error('Error in bidirectional iCloud sync:', error);
+    
+    // Atualizar histórico como erro
+    if (historyRecord?.id) {
+      await supabase
+        .from('sync_history')
+        .update({
+          sync_status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: error.message
+        })
+        .eq('id', historyRecord.id);
+    }
+    
     throw error;
   }
-}
 
 function determineEventType(title: string): string {
   const titleLower = title.toLowerCase();
