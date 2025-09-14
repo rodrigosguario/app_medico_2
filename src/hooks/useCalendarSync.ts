@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthGuard";
@@ -90,8 +90,8 @@ async function getGoogleAccessToken(): Promise<string> {
 export function useCalendarSync() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [providers, setProviders] = useState<Provider[]>([
+  const [loading, setLoading] = React.useState(false);
+  const [providers, setProviders] = React.useState<Provider[]>([
     {
       id: "google",
       name: "Google Calendar",
@@ -112,7 +112,7 @@ export function useCalendarSync() {
     },
   ]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!user) return;
     const fetchSettings = async () => {
       const { data, error } = await supabase
