@@ -114,12 +114,17 @@ export const CalendarSync: React.FC = () => {
     const provider = providers.find(p => p.id === providerId);
     if (!provider || provider.status !== 'connected') return;
 
-    // For demo purposes, we'll simulate sync since we need actual OAuth tokens
-    toast({
-      title: 'Configuração necessária',
-      description: 'Configure as credenciais OAuth para sincronização real',
-      variant: 'default'
-    });
+    try {
+      await syncCalendar(providerId);
+      await loadSyncHistory();
+    } catch (error) {
+      console.error('Erro na sincronização:', error);
+      toast({
+        title: 'Erro na sincronização',
+        description: 'Verifique as configurações e tente novamente',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleDisconnectProvider = async (providerId: string) => {
