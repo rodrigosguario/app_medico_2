@@ -309,8 +309,8 @@ export function useCalendarSync() {
         const { data, error } = await supabase.functions.invoke('outlook-calendar-sync', {
           body: {
             action: 'sync_bidirectional',
-            user_id: user!.id,
-            access_token: 'demo_token_' + Date.now()
+            userId: user!.id,
+            outlookAccessToken: 'demo_token_' + Date.now()
           }
         });
 
