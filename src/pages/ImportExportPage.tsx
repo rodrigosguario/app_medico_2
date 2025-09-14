@@ -3,11 +3,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ICSManager from '@/components/ICSManager';
 import Navigation from '@/components/Navigation';
 import { CalendarSync } from '@/components/CalendarSync';
-import AppointmentIntegrations from '@/components/AppointmentIntegrations';
 import { ZapierIntegration } from '@/components/ZapierIntegration';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, AlertCircle, Calendar, Zap } from 'lucide-react';
+import { CheckCircle, Calendar, Zap } from 'lucide-react';
 
 const ImportExportPage: React.FC = () => {
   return (
@@ -29,7 +28,7 @@ const ImportExportPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -37,15 +36,6 @@ const ImportExportPage: React.FC = () => {
                   </div>
                   <Badge variant="outline" className="bg-green-50 text-green-700">
                     Funcionando
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>Consultas Médicas</span>
-                  </div>
-                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                    Requer Token
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -62,19 +52,14 @@ const ImportExportPage: React.FC = () => {
           </Card>
 
           <Tabs defaultValue="calendar" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="calendar">Sincronização de Calendários</TabsTrigger>
-              <TabsTrigger value="appointments">Consultas Médicas</TabsTrigger>
               <TabsTrigger value="zapier">Zapier</TabsTrigger>
               <TabsTrigger value="data">Importar/Exportar Dados</TabsTrigger>
             </TabsList>
             
             <TabsContent value="calendar" className="space-y-4">
               <CalendarSync />
-            </TabsContent>
-            
-            <TabsContent value="appointments" className="space-y-4">
-              <AppointmentIntegrations />
             </TabsContent>
             
             <TabsContent value="zapier" className="space-y-4">
