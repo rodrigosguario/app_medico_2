@@ -25,6 +25,8 @@ import {
 import { useCalendarSync } from '@/hooks/useCalendarSync';
 import { useSupabaseEvents } from '@/hooks/useSupabaseEvents';
 import { useToast } from '@/hooks/use-toast';
+import { useImprovedFeedbackToast } from '@/components/ImprovedFeedbackToast';
+import { cn } from '@/lib/utils';
 
 export const CalendarSync: React.FC = () => {
   const { 
@@ -40,10 +42,13 @@ export const CalendarSync: React.FC = () => {
   } = useCalendarSync();
   const { createEvent } = useSupabaseEvents();
   const { toast } = useToast();
+  const feedbackToast = useImprovedFeedbackToast();
   const [syncHistory, setSyncHistory] = useState<any[]>([]);
   const [autoSync, setAutoSync] = useState(true);
   const [syncNotifications, setSyncNotifications] = useState(true);
   const [bidirectionalSync, setBidirectionalSync] = useState(false);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
 
   useEffect(() => {
     loadSyncHistory();
@@ -94,22 +99,25 @@ export const CalendarSync: React.FC = () => {
   };
 
   const handleConnectProvider = async (providerId: string) => {
+    setConnectingProvider(providerId);
     try {
       if (providerId === 'google') {
         await connectGoogleCalendar();
+        feedbackToast.success('Google Calendar conectado!', 'Agora você pode sincronizar seus eventos.');
       } else if (providerId === 'outlook') {
         await connectOutlookCalendar();
+        feedbackToast.success('Outlook conectado!', 'Agora você pode sincronizar seus eventos.');
       } else if (providerId === 'icloud') {
         await connectIcloudCalendar();
+        feedbackToast.success('iCloud conectado!', 'Agora você pode sincronizar seus eventos.');
       } else {
-        toast({
-          title: 'Em desenvolvimento',
-          description: `Integração com ${providerId} em breve`,
-          variant: 'default'
-        });
+        feedbackToast.info('Em desenvolvimento', `Integração com ${providerId} em breve`);
       }
     } catch (error) {
       console.error('Error connecting provider:', error);
+      feedbackToast.error('Erro na conexão', `Não foi possível conectar com ${providerId}`);
+    } finally {
+      setConnectingProvider(null);
     }
   };
 
@@ -117,22 +125,32 @@ export const CalendarSync: React.FC = () => {
     const provider = providers.find(p => p.id === providerId);
     if (!provider || provider.status !== 'connected') return;
 
+    setSyncingProvider(providerId);
+    feedbackToast.syncInProgress(provider.name);
+
     try {
       await syncCalendar(providerId);
       await loadSyncHistory();
+      feedbackToast.syncComplete(provider.name, provider.eventsCount || 0);
     } catch (error) {
       console.error('Erro na sincronização:', error);
-      toast({
-        title: 'Erro na sincronização',
-        description: 'Verifique as configurações e tente novamente',
-        variant: 'destructive'
-      });
+      feedbackToast.error(
+        'Erro na sincronização',
+        'Verifique as configurações e tente novamente'
+      );
+    } finally {
+      setSyncingProvider(null);
     }
   };
 
   const handleDisconnectProvider = async (providerId: string) => {
+    const provider = providers.find(p => p.id === providerId);
     await disconnectProvider(providerId);
     await loadSyncHistory();
+    
+    if (provider) {
+      feedbackToast.info('Calendário desconectado', `${provider.name} foi desconectado com sucesso.`);
+    }
   };
 
   const handleImportICS = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,18 +194,13 @@ export const CalendarSync: React.FC = () => {
           }
         }
         
-        toast({
-          title: 'Importação concluída',
-          description: `${successCount} eventos importados${errorCount > 0 ? `, ${errorCount} falharam` : ''}`,
-          variant: successCount > 0 ? 'default' : 'destructive'
-        });
+        feedbackToast.importSuccess(successCount, errorCount);
       } catch (error) {
         console.error('Erro ao importar arquivo ICS:', error);
-        toast({
-          title: 'Erro na importação',
-          description: 'Formato de arquivo inválido',
-          variant: 'destructive'
-        });
+        feedbackToast.error(
+          'Erro na importação',
+          'Formato de arquivo inválido'
+        );
       }
     };
     reader.readAsText(file);
@@ -358,15 +371,21 @@ export const CalendarSync: React.FC = () => {
                         variant="outline" 
                         size="sm" 
                         onClick={() => handleSyncProvider(provider.id)}
-                        disabled={loading}
+                        disabled={loading || syncingProvider === provider.id}
+                        title="Sincronizar eventos agora"
                       >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Sincronizar
+                        <RefreshCw className={cn(
+                          "h-4 w-4 mr-2", 
+                          (loading || syncingProvider === provider.id) && "animate-spin"
+                        )} />
+                        {syncingProvider === provider.id ? 'Sincronizando...' : 'Sincronizar'}
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => handleDisconnectProvider(provider.id)}
+                        title="Desconectar este calendário"
+                        disabled={syncingProvider === provider.id}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Desconectar
@@ -378,15 +397,20 @@ export const CalendarSync: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleConnectProvider(provider.id)}
-                      disabled={loading}
+                      disabled={loading || connectingProvider === provider.id}
+                      title="Conectar este calendário"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Conectar
+                      {(loading || connectingProvider === provider.id) ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      {connectingProvider === provider.id ? 'Conectando...' : 'Conectar'}
                     </Button>
                   )}
-                  {provider.status === 'syncing' && (
+                  {(provider.status === 'syncing' || syncingProvider === provider.id) && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 animate-pulse" />
+                      <RefreshCw className="h-4 w-4 animate-spin" />
                       Sincronizando...
                     </div>
                   )}
@@ -461,7 +485,17 @@ export const CalendarSync: React.FC = () => {
               <div className="space-y-2">
                 <Label>Exportar calendário</Label>
                 <div className="flex gap-2">
-                  <Button onClick={exportToICS} className="flex-1">
+                  <Button 
+                    onClick={() => {
+                      toast({
+                        title: "Exportando...",
+                        description: "Preparando arquivo de calendário.",
+                      });
+                      exportToICS();
+                    }} 
+                    className="flex-1"
+                    title="Baixar todos os eventos em formato ICS"
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Baixar ICS
                   </Button>

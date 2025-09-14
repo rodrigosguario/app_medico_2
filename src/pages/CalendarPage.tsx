@@ -36,7 +36,9 @@ import Navigation from '../components/Navigation';
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { useImprovedFeedbackToast } from '@/components/ImprovedFeedbackToast';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CalendarEvent {
   id: string;
@@ -62,6 +64,7 @@ const CalendarPage: React.FC = () => {
   const { profile } = useProfile();
   const { isMinimized, isVisible, showAssistant, hideAssistant, toggleMinimized } = useAIAssistant();
   const { toast } = useToast();
+  const feedbackToast = useImprovedFeedbackToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
@@ -155,16 +158,10 @@ const CalendarPage: React.FC = () => {
 
             if (editingEvent) {
               await updateEvent(editingEvent.id, eventData);
-              toast({
-                title: "Evento atualizado",
-                description: "As alterações foram salvas com sucesso.",
-              });
+              feedbackToast.eventUpdated(eventForm.title);
             } else {
               await createEvent(eventData);
-              toast({
-                title: "Evento criado",
-                description: "O evento foi adicionado ao seu calendário.",
-              });
+              feedbackToast.eventCreated(eventForm.title);
             }
 
             setShowEventDialog(false);
@@ -198,19 +195,16 @@ const CalendarPage: React.FC = () => {
   };
 
         const handleDeleteEvent = async (eventId: string) => {
+          const eventToDelete = events.find(e => e.id === eventId);
           try {
             await deleteEvent(eventId);
-            toast({
-              title: "Evento excluído",
-              description: "O evento foi removido do seu calendário.",
-            });
+            feedbackToast.eventDeleted(eventToDelete?.title || 'Evento');
           } catch (error) {
             console.error('Error deleting event:', error);
-            toast({
-              title: "Erro ao excluir evento",
-              description: "Não foi possível excluir o evento. Tente novamente.",
-              variant: "destructive",
-            });
+            feedbackToast.error(
+              "Erro ao excluir evento",
+              "Não foi possível excluir o evento. Tente novamente."
+            );
           }
         };
 
@@ -238,6 +232,8 @@ const CalendarPage: React.FC = () => {
   };
 
   const exportToICS = () => {
+    feedbackToast.info("Preparando exportação...", "Gerando arquivo ICS para download.");
+
     let icsContent = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MedicoAgenda//Calendar//PT\n';
     
     events.forEach(event => {
@@ -261,9 +257,14 @@ const CalendarPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'medicoagenda-calendar.ics';
+    a.download = `agenda-medica-${format(new Date(), 'yyyy-MM-dd')}.ics`;
     a.click();
     URL.revokeObjectURL(url);
+    
+    // Show success message after a brief delay
+    setTimeout(() => {
+      feedbackToast.exportSuccess(events.length);
+    }, 1000);
   };
 
   const renderMonthView = () => {
