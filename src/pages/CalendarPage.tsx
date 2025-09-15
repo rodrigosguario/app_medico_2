@@ -149,23 +149,35 @@ useEffect(() => {
   setEditingEvent(null);
 };
 
-        const handleCreateEvent = async (e: React.FormEvent) => {
+const handleCreateEvent = async (e: React.FormEvent) => {
   e.preventDefault();
   
   try {
     // Validação de campos obrigatórios
     if (!eventForm.title.trim()) {
-      toast.error('O título é obrigatório');
+      toast({
+        title: "Erro",
+        description: "O título é obrigatório",
+        variant: "destructive"
+      });
       return;
     }
     
     if (!eventForm.start_time) {
-      toast.error('A data e hora de início são obrigatórias');
+      toast({
+        title: "Erro", 
+        description: "A data e hora de início são obrigatórias",
+        variant: "destructive"
+      });
       return;
     }
     
     if (!eventForm.end_time) {
-      toast.error('A data e hora de fim são obrigatórias');
+      toast({
+        title: "Erro",
+        description: "A data e hora de fim são obrigatórias", 
+        variant: "destructive"
+      });
       return;
     }
 
@@ -196,44 +208,34 @@ useEffect(() => {
       description: eventForm.description || null,
       value: eventForm.value ? parseFloat(eventForm.value.toString()) : null,
       status: statusMapping[eventForm.status as keyof typeof statusMapping] || 'confirmed',
-      user_id: user?.id
+      user_id: profile?.id
     };
 
     console.log('Dados do evento a serem enviados:', eventData);
 
     if (editingEvent) {
-      const { error } = await supabase
-        .from('events')
-        .update(eventData)
-        .eq('id', editingEvent.id);
-
-      if (error) {
-        console.error('Erro ao atualizar evento:', error);
-        toast.error(`Erro ao atualizar evento: ${error.message}`);
-        return;
-      }
-
-      toast.success('Evento atualizado com sucesso!');
+      await updateEvent(editingEvent.id, eventData);
+      toast({
+        title: "Sucesso",
+        description: "Evento atualizado com sucesso!"
+      });
     } else {
-      const { error } = await supabase
-        .from('events')
-        .insert([eventData]);
-
-      if (error) {
-        console.error('Erro ao criar evento:', error);
-        toast.error(`Erro ao criar evento: ${error.message}`);
-        return;
-      }
-
-      toast.success(`Evento criado! "${eventForm.title}" foi adicionado ao seu calendário.`);
+      await createEvent(eventData);
+      toast({
+        title: "Sucesso", 
+        description: `Evento criado! "${eventForm.title}" foi adicionado ao seu calendário.`
+      });
     }
 
     setShowEventDialog(false);
     resetEventForm();
-    refetch();
   } catch (error) {
     console.error('Erro inesperado:', error);
-    toast.error('Erro inesperado ao processar evento');
+    toast({
+      title: "Erro",
+      description: "Erro inesperado ao processar evento",
+      variant: "destructive"
+    });
   }
 };
 
@@ -602,25 +604,27 @@ useEffect(() => {
                   <ZapierIntegration />
                 </DialogContent>
               </Dialog>
+            </div>
 
-<Button onClick={() => {
-  // Set default times when opening new event dialog
-  const now = new Date();
-  const startTime = format(now, "yyyy-MM-dd'T'09:00");
-  const endTime = format(now, "yyyy-MM-dd'T'10:00");
-  setEventForm(prev => ({
-    ...prev,
-    start_time: startTime,
-    end_time: endTime
-  }));
-  setShowEventDialog(true);
-}} className="bg-medical hover:bg-medical-dark text-medical-foreground">
-  <Plus className="h-4 w-4 mr-2" />
-  Novo Evento
-</Button>
+            <Button onClick={() => {
+              // Set default times when opening new event dialog
+              const now = new Date();
+              const startTime = format(now, "yyyy-MM-dd'T'09:00");
+              const endTime = format(now, "yyyy-MM-dd'T'10:00");
+              setEventForm(prev => ({
+                ...prev,
+                start_time: startTime,
+                end_time: endTime
+              }));
+              setShowEventDialog(true);
+            }} className="bg-medical hover:bg-medical-dark text-medical-foreground">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Evento
+            </Button>
+          </div>
 
           {/* Calendar Controls */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">{" "}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="sm" onClick={() => navigateDate('prev')}>
