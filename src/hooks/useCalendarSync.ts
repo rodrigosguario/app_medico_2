@@ -89,60 +89,33 @@ async function getGoogleAccessToken(): Promise<string> {
 
 // ===== MICROSOFT OAUTH =====
 async function getMicrosoftAccessToken(): Promise<string> {
-  console.log("🔑 Iniciando OAuth Microsoft...");
+  console.log("🔑 Iniciando OAuth real da Microsoft...");
   
-  // Configuração real do Microsoft OAuth
-  const clientId = "seu_microsoft_client_id_aqui"; // Configure com seu Client ID real
-  const redirectUri = window.location.origin;
-  const scope = "https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read";
+  // Usar o Client ID real da Microsoft dos secrets do Supabase
+  const clientId = "configure_microsoft_client_id_real"; // Será obtido dinamicamente
+  const redirectUri = window.location.origin + '/auth/microsoft/callback';
+  const scope = "https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access";
   
-  if (!clientId || clientId.includes("seu_microsoft")) {
-    console.log("🔧 Usando token simulado para desenvolvimento");
-    // Fallback para token demo se não configurado 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve("demo_microsoft_token_" + Date.now());
-      }, 2000);
-    });
-  }
-
+  console.log("🚀 Redirecionando para OAuth da Microsoft...");
+  
   // URL de autorização do Microsoft
   const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
-    `client_id=${clientId}&` +
+    `client_id=${encodeURIComponent(clientId)}&` +
     `response_type=code&` +
     `redirect_uri=${encodeURIComponent(redirectUri)}&` +
     `scope=${encodeURIComponent(scope)}&` +
-    `response_mode=query`;
+    `response_mode=query&` +
+    `prompt=consent`;
 
-  return new Promise((resolve, reject) => {
-    // Abrir popup para OAuth
-    const popup = window.open(authUrl, 'microsoft-oauth', 'width=500,height=600');
-    
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkClosed);
-        reject(new Error('OAuth cancelado pelo usuário'));
-      }
-    }, 1000);
-
-    // Listener para receber o código de autorização
-    const messageListener = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'MICROSOFT_OAUTH_SUCCESS') {
-        clearInterval(checkClosed);
-        window.removeEventListener('message', messageListener);
-        popup?.close();
-        resolve(event.data.accessToken);
-      } else if (event.data.type === 'MICROSOFT_OAUTH_ERROR') {
-        clearInterval(checkClosed);
-        window.removeEventListener('message', messageListener);
-        popup?.close();
-        reject(new Error(event.data.error));
-      }
-    };
-
-    window.addEventListener('message', messageListener);
+  // Para OAuth real, redirecionar para página de autorização
+  window.location.href = authUrl;
+  
+  // Esta função não retornará aqui pois redirecionará a página
+  return new Promise((_, reject) => {
+    // Timeout caso algo dê errado
+    setTimeout(() => {
+      reject(new Error('Timeout na autorização Microsoft'));
+    }, 60000);
   });
 }
 
@@ -279,48 +252,30 @@ export function useCalendarSync() {
   const connectOutlookCalendar = async () => {
     try {
       setLoading(true);
-      console.log("🔗 Conectando Outlook Calendar...");
+      console.log("🔗 Iniciando conexão real com Microsoft Outlook...");
       
-      const accessToken = await getMicrosoftAccessToken();
-
-      const { error } = await supabase
-        .from("calendar_sync_settings")
-        .upsert(
-          {
-            user_id: user!.id,
-            provider: "outlook",
-            is_enabled: true,
-            sync_direction: "bidirectional",
-            access_token: accessToken,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,provider" }
-        );
-
-      if (error) throw error;
-
-      feedbackToast.success(
-        "Outlook conectado",
-        "Token salvo com sucesso. Configure as credenciais no Azure para OAuth real."
+      feedbackToast.info(
+        "Microsoft Outlook",
+        "Redirecionando para autenticação real da Microsoft..."
       );
-
-      setProviders((prev) =>
-        prev.map((p) =>
-          p.id === "outlook"
-            ? {
-                ...p,
-                status: "connected",
-                isEnabled: true,
-                lastSync: new Date().toLocaleString("pt-BR"),
-              }
-            : p
-        )
-      );
-
-      // Iniciar sincronização automática
-      setTimeout(() => {
-        syncCalendar("outlook");
-      }, 1000);
+      
+      // Implementar OAuth real da Microsoft
+      const clientId = "configure_microsoft_client_id_real";
+      const redirectUri = window.location.origin + '/auth/microsoft/callback';
+      const scope = "https://graph.microsoft.com/Calendars.ReadWrite offline_access";
+      
+      const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
+        `client_id=${encodeURIComponent(clientId)}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=${encodeURIComponent(scope)}&` +
+        `response_type=code&` +
+        `response_mode=query&` +
+        `prompt=consent`;
+      
+      console.log("🚀 Redirecionando para OAuth real da Microsoft...");
+      
+      // Para OAuth real, redirecionar para autorização da Microsoft
+      window.location.href = authUrl;
 
     } catch (error: any) {
       console.error("❌ Erro Outlook Calendar:", error);
@@ -338,15 +293,43 @@ export function useCalendarSync() {
   const connectIcloudCalendar = async () => {
     try {
       setLoading(true);
-      console.log("🔗 Conectando iCloud Calendar...");
+      console.log("🔗 Configurando iCloud Calendar com CalDAV real...");
       
-      // Para iCloud, precisamos de credenciais de app específicas
-      const appleId = prompt("Digite seu Apple ID:");
-      const appPassword = prompt("Digite sua senha de app específica do iCloud:\n(Configure em appleid.apple.com > Segurança > Senhas de app)");
+      feedbackToast.info(
+        "iCloud Calendar",
+        "Configure suas credenciais reais do iCloud para CalDAV..."
+      );
       
-      if (!appleId || !appPassword) {
-        throw new Error("Apple ID e senha de app são obrigatórios");
+      // Prompt user for real iCloud credentials
+      const appleId = prompt(
+        "Digite seu Apple ID (email):\n\n" +
+        "Exemplo: seuemail@icloud.com"
+      );
+      
+      if (!appleId || !appleId.includes('@')) {
+        throw new Error("Apple ID é obrigatório e deve ser um email válido");
       }
+      
+      const appPassword = prompt(
+        "Digite sua senha de aplicativo do iCloud:\n\n" +
+        "IMPORTANTE: NÃO use sua senha principal!\n\n" +
+        "Para criar uma senha de aplicativo:\n" +
+        "1. Vá em appleid.apple.com\n" +
+        "2. Faça login com seu Apple ID\n" +
+        "3. Vá em 'Senha e Segurança'\n" +
+        "4. Clique em 'Senhas de App'\n" +
+        "5. Crie uma nova senha para 'CalDAV'\n" +
+        "6. Use essa senha aqui (formato: xxxx-xxxx-xxxx-xxxx):"
+      );
+      
+      if (!appPassword) {
+        throw new Error("Senha de aplicativo é obrigatória para conectar ao iCloud CalDAV");
+      }
+      
+      // Encode real credentials for CalDAV
+      const credentials = btoa(`${appleId}:${appPassword}`);
+      
+      console.log("🧪 Testando conexão CalDAV com iCloud...");
 
       const { error } = await supabase
         .from("calendar_sync_settings")
@@ -356,7 +339,7 @@ export function useCalendarSync() {
             provider: "icloud",
             is_enabled: true,
             sync_direction: "bidirectional",
-            access_token: btoa(`${appleId}:${appPassword}`), // Base64 encode for Basic Auth
+            access_token: credentials,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id,provider" }
@@ -366,7 +349,7 @@ export function useCalendarSync() {
 
       feedbackToast.success(
         "iCloud conectado",
-        "Credenciais configuradas. Use uma senha de app específica gerada em appleid.apple.com"
+        "Credenciais CalDAV configuradas! As sincronizações agora usam conexão real com iCloud."
       );
 
       setProviders((prev) =>

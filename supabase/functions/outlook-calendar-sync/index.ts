@@ -60,78 +60,9 @@ async function importOutlookCalendarEvents(supabase: any, accessToken: string, u
   const startTime = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
   const endTime = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
 
-  // Se for token demo, usar eventos simulados para demonstração
-  if (accessToken.startsWith('demo_')) {
-    console.log('🔧 Token demo detectado - usando eventos simulados para demonstração');
-    
-    const demoEvents = [
-      {
-        id: 'demo_event_1',
-        subject: 'Consulta Cardiológica Demo',
-        body: { content: 'Este é um evento de demonstração' },
-        location: { displayName: 'Hospital Demo' },
-        start: { dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
-        end: { dateTime: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString() },
-        responseStatus: { response: 'accepted' }
-      }
-    ];
-
-    let importedCount = 0;
-    let errorCount = 0;
-
-    for (const outlookEvent of demoEvents) {
-      try {
-        // Check if event already exists
-        const { data: existingEvent } = await supabase
-          .from('events')
-          .select('id')
-          .eq('external_id', outlookEvent.id)
-          .eq('user_id', userId)
-          .single();
-
-        if (existingEvent) {
-          console.log(`Event ${outlookEvent.id} already exists, skipping`);
-          continue;
-        }
-
-        const eventData = {
-          user_id: userId,
-          external_id: outlookEvent.id,
-          external_source: 'outlook_calendar',
-          title: outlookEvent.subject || 'Evento sem título',
-          description: outlookEvent.body?.content || null,
-          location: outlookEvent.location?.displayName || null,
-          start_date: new Date(outlookEvent.start.dateTime).toISOString(),
-          end_date: new Date(outlookEvent.end.dateTime).toISOString(),
-          event_type: determineEventType(outlookEvent.subject || ''),
-          status: outlookEvent.responseStatus?.response === 'accepted' ? 'confirmed' : 'tentative'
-        };
-
-        const { error } = await supabase
-          .from('events')
-          .insert([eventData]);
-
-        if (error) {
-          console.error(`Error inserting event ${outlookEvent.id}:`, error);
-          errorCount++;
-        } else {
-          importedCount++;
-        }
-      } catch (error) {
-        console.error(`Error processing event ${outlookEvent.id}:`, error);
-        errorCount++;
-      }
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      imported: importedCount,
-      errors: errorCount,
-      totalProcessed: demoEvents.length,
-      message: '⚠️ Usando eventos demo - Configure token real do Microsoft Outlook'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  // Validate access token format
+  if (!accessToken || accessToken.length < 10) {
+    throw new Error('Token de acesso inválido para Microsoft Graph API');
   }
 
   console.log('🚀 Chamando Microsoft Graph API com token real...');
@@ -234,45 +165,7 @@ async function exportEventsToOutlookCalendar(supabase: any, accessToken: string,
     throw new Error(`Database error: ${error.message}`);
   }
 
-  // Para desenvolvimento com token demo
-  if (accessToken.startsWith('demo_')) {
-    console.log('Using demo token, simulating export to Outlook');
-    
-    let exportedCount = 0;
-    let errorCount = 0;
-
-    for (const event of events || []) {
-      try {
-        // Simulate successful export
-        const fakeExternalId = `demo_exported_${event.id}`;
-        
-        // Update local event with external_id
-        await supabase
-          .from('events')
-          .update({ 
-            external_id: fakeExternalId,
-            external_source: 'outlook_calendar'
-          })
-          .eq('id', event.id);
-
-        exportedCount++;
-        console.log(`Demo: Exported event ${event.title}`);
-      } catch (error) {
-        console.error(`Error exporting event ${event.id}:`, error);
-        errorCount++;
-      }
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      exported: exportedCount,
-      errors: errorCount,
-      totalProcessed: events?.length || 0,
-      message: 'Demo: Eventos exportados com sucesso (simulação)'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+  console.log(`🚀 Exportando ${events?.length || 0} eventos para Microsoft Graph API...`);
 
   // Real Microsoft Graph API calls
   let exportedCount = 0;
