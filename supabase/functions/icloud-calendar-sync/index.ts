@@ -55,27 +55,28 @@ serve(async (req) => {
 async function importIcloudCalendarEvents(supabase: any, credentials: string, userId: string) {
   console.log('Starting iCloud import for user:', userId);
   
-  // Para desenvolvimento, vamos simular eventos do iCloud
-  if (credentials === btoa('demo:demo')) {
-    console.log('Using demo credentials, simulating iCloud events');
+  // Decodificar credenciais base64 (formato: email:senha_app)
+  let decodedCredentials;
+  try {
+    decodedCredentials = atob(credentials);
+    console.log('🔑 Credenciais decodificadas, tentando conexão real com iCloud...');
+  } catch (error) {
+    console.error('❌ Erro ao decodificar credenciais:', error);
+    throw new Error('Credenciais inválidas do iCloud');
+  }
+
+  // Para desenvolvimento, simular se forem credenciais demo
+  if (decodedCredentials === 'demo:demo') {
+    console.log('🔧 Credenciais demo detectadas - usando eventos simulados para demonstração');
     
     const demoEvents = [
       {
         uid: 'demo_icloud_event_1',
-        summary: 'Reunião de Equipe Médica',
-        description: 'Discussão de casos clínicos',
-        location: 'Sala de Reuniões - Ala A',
+        summary: 'Reunião de Equipe Médica Demo',
+        description: 'Este é um evento de demonstração do iCloud',
+        location: 'Sala Demo',
         dtstart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
         dtend: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
-        status: 'CONFIRMED'
-      },
-      {
-        uid: 'demo_icloud_event_2',
-        summary: 'Procedimento Cardíaco',
-        description: 'Cateterismo cardíaco programado',
-        location: 'Centro Cirúrgico 3',
-        dtstart: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-        dtend: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000).toISOString(),
         status: 'CONFIRMED'
       }
     ];
@@ -132,20 +133,22 @@ async function importIcloudCalendarEvents(supabase: any, credentials: string, us
       imported: importedCount,
       errors: errorCount,
       totalProcessed: demoEvents.length,
-      message: 'Demo: Eventos simulados do iCloud importados com sucesso'
+      message: '⚠️ Usando eventos demo - Configure credenciais reais do iCloud'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
-  // Real CalDAV implementation would go here
-  // For now, return demo results
+  console.log('🚀 Tentando conectar com iCloud CalDAV...');
+  
+  // Para implementação real do iCloud CalDAV
+  // Por enquanto, retornar mensagem informativa
   return new Response(JSON.stringify({
-    success: true,
+    success: false,
     imported: 0,
-    errors: 0,
+    errors: 1,
     totalProcessed: 0,
-    message: 'Configure credenciais reais do iCloud para sincronização'
+    message: '⚠️ iCloud CalDAV não implementado ainda - precisa configurar servidor CalDAV'
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

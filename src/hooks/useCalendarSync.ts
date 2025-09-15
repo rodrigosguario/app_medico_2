@@ -43,10 +43,10 @@ function loadGoogleScript(): Promise<void> {
 async function getGoogleAccessToken(): Promise<string> {
   // IMPORTANTE: Configure seu Client ID real aqui
   // Obtenha em: https://console.cloud.google.com/apis/credentials
-  const clientId = "96055265793-jv779hsni65f6pmv54jn65a4vv04f9kj.apps.googleusercontent.com"; // SUBSTITUA pelo seu Client ID real
+  const clientId = "96055265793-jv779hsni65f6pmv54jn65a4vv04f9kj.apps.googleusercontent.com";
   
   if (!clientId || clientId.includes("YOUR_GOOGLE") || clientId.includes("1234567890")) {
-    throw new Error("⚠️ Configure o Google Client ID real no código! Veja docs/google-oauth-setup.md");
+    throw new Error("⚠️ Configure o Google Client ID real no código!");
   }
 
   console.log("🔑 Iniciando OAuth com Client ID:", clientId.substring(0, 20) + "...");

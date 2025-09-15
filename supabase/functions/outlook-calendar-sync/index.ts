@@ -55,27 +55,23 @@ serve(async (req) => {
 async function importOutlookCalendarEvents(supabase: any, accessToken: string, userId: string) {
   console.log('Starting import for user:', userId);
   
-  // Para desenvolvimento, vamos simular eventos do Outlook
+  // Real Microsoft Graph API call
+  const now = new Date();
+  const startTime = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const endTime = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
+
+  // Se for token demo, usar eventos simulados para demonstração
   if (accessToken.startsWith('demo_')) {
-    console.log('Using demo token, simulating Outlook events');
+    console.log('🔧 Token demo detectado - usando eventos simulados para demonstração');
     
     const demoEvents = [
       {
         id: 'demo_event_1',
-        subject: 'Consulta Cardiológica',
-        body: { content: 'Consulta de rotina com paciente' },
-        location: { displayName: 'Hospital Central' },
+        subject: 'Consulta Cardiológica Demo',
+        body: { content: 'Este é um evento de demonstração' },
+        location: { displayName: 'Hospital Demo' },
         start: { dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
         end: { dateTime: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString() },
-        responseStatus: { response: 'accepted' }
-      },
-      {
-        id: 'demo_event_2',
-        subject: 'Plantão Noturno',
-        body: { content: 'Plantão de 12 horas' },
-        location: { displayName: 'UTI Cardíaca' },
-        start: { dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString() },
-        end: { dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000).toISOString() },
         responseStatus: { response: 'accepted' }
       }
     ];
@@ -132,16 +128,13 @@ async function importOutlookCalendarEvents(supabase: any, accessToken: string, u
       imported: importedCount,
       errors: errorCount,
       totalProcessed: demoEvents.length,
-      message: 'Demo: Eventos simulados importados com sucesso'
+      message: '⚠️ Usando eventos demo - Configure token real do Microsoft Outlook'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
-  // Real Microsoft Graph API call (requires valid token)
-  const now = new Date();
-  const startTime = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-  const endTime = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
+  console.log('🚀 Chamando Microsoft Graph API com token real...');
 
   const response = await fetch(
     `https://graph.microsoft.com/v1.0/me/calendar/events?$filter=start/dateTime ge '${startTime}' and start/dateTime le '${endTime}'&$orderby=start/dateTime`,
@@ -154,11 +147,15 @@ async function importOutlookCalendarEvents(supabase: any, accessToken: string, u
   );
 
   if (!response.ok) {
-    throw new Error(`Microsoft Graph API error: ${response.status}`);
+    const errorText = await response.text();
+    console.error('❌ Microsoft Graph API error:', response.status, errorText);
+    throw new Error(`Microsoft Graph API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
   const events = data.value || [];
+  
+  console.log(`📅 Encontrados ${events.length} eventos no Outlook`);
 
   let importedCount = 0;
   let errorCount = 0;
