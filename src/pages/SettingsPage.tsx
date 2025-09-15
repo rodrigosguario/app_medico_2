@@ -227,7 +227,28 @@ const SettingsPage: React.FC = () => {
                         <Label htmlFor="tax_type">Tipo de Tributação</Label>
                         <Select 
                           value={profileForm.tax_type} 
-                          onValueChange={(value) => setProfileForm(prev => ({ ...prev, tax_type: value }))}
+                          onValueChange={(value) => {
+                            // Automatically set tax rate based on taxation type
+                            let defaultTaxRate = 6.00;
+                            switch (value) {
+                              case 'mei':
+                                defaultTaxRate = 5.00;
+                                break;
+                              case 'simples_nacional':
+                                defaultTaxRate = 6.00;
+                                break;
+                              case 'sociedade_simples_limitada':
+                                defaultTaxRate = 11.00;
+                                break;
+                              default:
+                                defaultTaxRate = 6.00;
+                            }
+                            setProfileForm(prev => ({ 
+                              ...prev, 
+                              tax_type: value,
+                              tax_rate: defaultTaxRate
+                            }));
+                          }}
                         >
                           <SelectTrigger>
                             <SelectValue />
