@@ -38,7 +38,9 @@ export const CalendarSync: React.FC = () => {
     syncCalendar,
     disconnectProvider,
     getSyncHistory,
-    exportToICS 
+    exportToICS,
+    saveGeneralSettings,
+    loadGeneralSettings
   } = useCalendarSync();
   const { createEvent } = useSupabaseEvents();
   const { toast } = useToast();
@@ -52,7 +54,29 @@ export const CalendarSync: React.FC = () => {
 
   useEffect(() => {
     loadSyncHistory();
+    loadSavedSettings();
   }, []);
+
+  const loadSavedSettings = async () => {
+    try {
+      const settings = await loadGeneralSettings();
+      if (settings.autoSync !== undefined) setAutoSync(settings.autoSync);
+      if (settings.syncNotifications !== undefined) setSyncNotifications(settings.syncNotifications);
+      if (settings.bidirectionalSync !== undefined) setBidirectionalSync(settings.bidirectionalSync);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const saveSettings = async (newSettings: { autoSync?: boolean; syncNotifications?: boolean; bidirectionalSync?: boolean }) => {
+    try {
+      await saveGeneralSettings(newSettings);
+      feedbackToast.success('Configurações salvas', 'Suas preferências foram atualizadas.');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      feedbackToast.error('Erro ao salvar', 'Não foi possível salvar as configurações.');
+    }
+  };
 
   const loadSyncHistory = async () => {
     try {
@@ -438,7 +462,10 @@ export const CalendarSync: React.FC = () => {
               </div>
               <Switch 
                 checked={autoSync} 
-                onCheckedChange={setAutoSync}
+                onCheckedChange={(checked) => {
+                  setAutoSync(checked);
+                  saveSettings({ autoSync: checked });
+                }}
               />
             </div>
 
@@ -451,7 +478,10 @@ export const CalendarSync: React.FC = () => {
               </div>
               <Switch 
                 checked={syncNotifications} 
-                onCheckedChange={setSyncNotifications}
+                onCheckedChange={(checked) => {
+                  setSyncNotifications(checked);
+                  saveSettings({ syncNotifications: checked });
+                }}
               />
             </div>
 
@@ -464,7 +494,10 @@ export const CalendarSync: React.FC = () => {
               </div>
               <Switch 
                 checked={bidirectionalSync} 
-                onCheckedChange={setBidirectionalSync}
+                onCheckedChange={(checked) => {
+                  setBidirectionalSync(checked);
+                  saveSettings({ bidirectionalSync: checked });
+                }}
               />
             </div>
           </CardContent>

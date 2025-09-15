@@ -616,6 +616,62 @@ export function useCalendarSync() {
     );
   };
 
+  const saveGeneralSettings = async (settings: {
+    autoSync?: boolean;
+    syncNotifications?: boolean;
+    bidirectionalSync?: boolean;
+  }) => {
+    try {
+      if (!user) throw new Error('Usuário não autenticado');
+
+      console.log('💾 Salvando configurações gerais:', settings);
+
+      const { error } = await supabase
+        .from('calendar_sync_settings')
+        .upsert({
+          user_id: user.id,
+          provider: 'general',
+          is_enabled: true,
+          settings: JSON.stringify(settings),
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      console.log('✅ Configurações gerais salvas');
+    } catch (error) {
+      console.error('❌ Erro ao salvar configurações gerais:', error);
+      throw error;
+    }
+  };
+
+  const loadGeneralSettings = async () => {
+    try {
+      if (!user) return {};
+
+      console.log('📖 Carregando configurações gerais...');
+
+      const { data, error } = await supabase
+        .from('calendar_sync_settings')
+        .select('settings')
+        .eq('user_id', user.id)
+        .eq('provider', 'general')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data?.settings) {
+        const settings = JSON.parse(data.settings as string);
+        console.log('✅ Configurações gerais carregadas:', settings);
+        return settings;
+      }
+
+      return {};
+    } catch (error) {
+      console.error('❌ Erro ao carregar configurações gerais:', error);
+      return {};
+    }
+  };
+
   return {
     loading,
     providers,
@@ -626,5 +682,7 @@ export function useCalendarSync() {
     disconnectProvider,
     getSyncHistory,
     exportToICS,
+    saveGeneralSettings,
+    loadGeneralSettings
   };
 }
