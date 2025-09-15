@@ -24,12 +24,16 @@ export const useProfile = () => {
   const { user } = useAuth();
 
   React.useEffect(() => {
+    let isCancelled = false;
+    
     const fetchProfile = async () => {
       if (!user) {
         setProfile(null);
         setLoading(false);
         return;
       }
+
+      if (isCancelled) return;
 
       try {
         console.log('🔄 Buscando perfil para usuário:', user.id);
@@ -74,14 +78,22 @@ export const useProfile = () => {
           setProfile(data);
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
-        setError('Erro ao carregar perfil');
+        if (!isCancelled) {
+          console.error('Error fetching profile:', error);
+          setError('Erro ao carregar perfil');
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProfile();
+    
+    return () => {
+      isCancelled = true;
+    };
   }, [user]);
 
   return { profile, loading, error };

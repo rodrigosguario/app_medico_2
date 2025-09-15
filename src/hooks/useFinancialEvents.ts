@@ -111,27 +111,32 @@ export const useFinancialEvents = () => {
 
       console.log('🔄 Loading financial events...');
 
-      if (syncStatus.isOnline) {
-        const user = await supabase.auth.getUser();
-        if (!user.data.user) {
-          throw new Error('Usuário não autenticado');
-        }
+      // Verificar se já está fazendo um request para evitar loops
+      if (!syncStatus.isOnline) {
+        setError('Sem conexão com a internet');
+        setLoading(false);
+        return;
+      }
+      
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error('Usuário não autenticado');
+      }
 
-        console.log('👤 User authenticated:', user.data.user.id);
+      console.log('👤 User authenticated:', user.data.user.id);
 
-        const { data, error: supabaseError } = await supabase
-          .from('financial_events')
-          .select('*')
-          .eq('user_id', user.data.user.id)
-          .order('date', { ascending: false });
+      const { data, error: supabaseError } = await supabase
+        .from('financial_events')
+        .select('*')
+        .eq('user_id', user.data.user.id)
+        .order('date', { ascending: false });
 
-        if (supabaseError) throw supabaseError;
+      if (supabaseError) throw supabaseError;
 
-        console.log('💰 Financial events loaded:', data?.length || 0, 'items');
+      console.log('💰 Financial events loaded:', data?.length || 0, 'items');
 
-        if (data) {
-          setFinancialEvents(data);
-        }
+      if (data) {
+        setFinancialEvents(data);
       }
     } catch (error) {
       console.error('❌ Error loading financial events:', error);
@@ -225,8 +230,8 @@ export const useFinancialEvents = () => {
   useEffect(() => {
     if (syncStatus.isOnline) {
       loadFinancialEvents();
-      // Sincronizar eventos automaticamente após carregar
-      syncEventsToFinancial();
+      // Não executar sync automático para evitar requests excessivos
+      // syncEventsToFinancial pode ser chamado manualmente quando necessário
     }
   }, [syncStatus.isOnline]);
 
