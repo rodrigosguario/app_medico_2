@@ -258,10 +258,12 @@ export function useCalendarSync() {
       console.error("❌ Erro Google Calendar:", error);
       
       let errorMessage = "Falha ao conectar Google Calendar";
-      if (error.message.includes("Configure o Google Client ID")) {
+      if (error?.message && error.message.includes("Configure o Google Client ID")) {
         errorMessage = "Configure o Google Client ID no código primeiro!";
-      } else if (error.message.includes("OAuth Error")) {
+      } else if (error?.message && error.message.includes("OAuth Error")) {
         errorMessage = "Erro de autenticação OAuth. Verifique a configuração no Google Cloud Console.";
+      } else if (error?.message && error.message.includes("Failed to fetch")) {
+        errorMessage = "Erro de conectividade. Verifique sua conexão com a internet.";
       }
       
       feedbackToast.error(
@@ -325,7 +327,7 @@ export function useCalendarSync() {
       
       feedbackToast.error(
         "Erro",
-        "Falha ao conectar Outlook Calendar: " + error.message
+        "Falha ao conectar Outlook Calendar: " + (error?.message || "Erro desconhecido")
       );
     } finally {
       setLoading(false);
@@ -390,7 +392,7 @@ export function useCalendarSync() {
       
       feedbackToast.error(
         "Erro",
-        "Falha ao conectar iCloud Calendar: " + error.message
+        "Falha ao conectar iCloud Calendar: " + (error?.message || "Erro desconhecido")
       );
     } finally {
       setLoading(false);

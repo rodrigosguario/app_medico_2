@@ -28,9 +28,9 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('🚨 ErrorBoundary capturou erro:', error, errorInfo);
     
     // Log specific network errors
-    if (error.message.includes('Failed to fetch') || 
+    if (error?.message && (error.message.includes('Failed to fetch') || 
         error.message.includes('ERR_INTERNET_DISCONNECTED') ||
-        error.message.includes('NetworkError')) {
+        error.message.includes('NetworkError'))) {
       console.error('🌐 Erro de rede detectado:', {
         message: error.message,
         stack: error.stack,

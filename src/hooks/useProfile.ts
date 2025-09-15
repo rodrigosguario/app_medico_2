@@ -44,7 +44,7 @@ export const useProfile = () => {
 
         if (error) {
           console.error('❌ Erro ao buscar perfil:', error);
-          setError(error.message);
+          setError(error?.message || 'Erro ao buscar perfil');
         } else if (!data) {
           // Profile doesn't exist, create it using auth metadata
           console.log('🆕 Perfil não encontrado, criando com metadados de auth...');

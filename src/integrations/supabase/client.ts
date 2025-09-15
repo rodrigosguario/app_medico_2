@@ -36,7 +36,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 supabase.from('profiles').select('count', { count: 'exact', head: true })
   .then(({ error, count }) => {
     if (error) {
-      console.error('❌ Erro de conectividade Supabase:', error.message);
+      console.error('❌ Erro de conectividade Supabase:', error?.message || 'Erro desconhecido');
       console.error('Detalhes:', error);
     } else {
       console.log('✅ Supabase conectado com sucesso!', { count });

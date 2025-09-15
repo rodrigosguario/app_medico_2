@@ -193,11 +193,11 @@ export const SystemTestSuite: React.FC = () => {
         body: { message: 'teste', userId: 'test' }
       });
       // Function exists and responds (even if with error)
-      if (error && error.message.includes('not found')) {
+      if (error && error?.message && error.message.includes('not found')) {
         throw new Error('Edge function AI não encontrada');
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes('not found')) {
+      if (error instanceof Error && error?.message && error.message.includes('not found')) {
         throw error;
       }
       // Function exists but may have validation errors, which is OK
