@@ -2,14 +2,28 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://kmwsoppkrjzjioeadtqb.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttd3NvcHBrcmp6amlvZWFkdHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3ODkzNzYsImV4cCI6MjA3MzM2NTM3Nn0.RsQd3r30Ezfi5x_Di2eLgkqm5SCDC9tlOIXIDRJcYMY";
+// Use environment variables with fallback to hardcoded values for development
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://kmwsoppkrjzjioeadtqb.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttd3NvcHBrcmp6amlvZWFkdHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3ODkzNzYsImV4cCI6MjA3MzM2NTM3Nn0.RsQd3r30Ezfi5x_Di2eLgkqm5SCDC9tlOIXIDRJcYMY";
 
 console.log('🔧 Inicializando cliente Supabase:', {
   url: SUPABASE_URL,
   keyLength: SUPABASE_PUBLISHABLE_KEY?.length,
-  hasKey: !!SUPABASE_PUBLISHABLE_KEY
+  hasKey: !!SUPABASE_PUBLISHABLE_KEY,
+  usingEnvVars: {
+    url: !!import.meta.env.VITE_SUPABASE_URL,
+    key: !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  }
 });
+
+// Validate required configuration
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.error('❌ Configuração do Supabase incompleta:', {
+    hasUrl: !!SUPABASE_URL,
+    hasKey: !!SUPABASE_PUBLISHABLE_KEY
+  });
+  throw new Error('Configuração do Supabase incompleta. Verifique as variáveis de ambiente.');
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +33,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce'
   },
   global: {
     headers: {
@@ -32,13 +48,45 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Test connection on initialization
-supabase.from('profiles').select('count', { count: 'exact', head: true })
-  .then(({ error, count }) => {
+// Enhanced connection test with better error handling
+const testConnection = async () => {
+  try {
+    console.log('🔍 Testando conectividade com Supabase...');
+    
+    // Test basic connectivity
+    const { data, error, count } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+    
     if (error) {
-      console.error('❌ Erro de conectividade Supabase:', error?.message || 'Erro desconhecido');
-      console.error('Detalhes:', error);
+      console.error('❌ Erro de conectividade Supabase:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
+      // Provide specific guidance based on error type
+      if (error.message.includes('JWT')) {
+        console.error('🔑 Problema com autenticação JWT. Verifique as chaves do Supabase.');
+      } else if (error.message.includes('CORS')) {
+        console.error('🌐 Problema de CORS. Verifique as configurações de domínio no Supabase.');
+      } else if (error.message.includes('permission')) {
+        console.error('🔒 Problema de permissões RLS. Verifique as políticas de segurança.');
+      }
     } else {
-      console.log('✅ Supabase conectado com sucesso!', { count });
+      console.log('✅ Supabase conectado com sucesso!', { 
+        profilesCount: count,
+        timestamp: new Date().toISOString()
+      });
     }
-  });
+  } catch (err) {
+    console.error('💥 Erro inesperado ao testar conexão:', err);
+  }
+};
+
+// Test connection on initialization
+testConnection();
+
+// Export connection test function for manual testing
+export { testConnection };

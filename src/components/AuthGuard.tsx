@@ -56,24 +56,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signIn = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
+      console.log('🔐 Tentando fazer login...', { email });
+      
       const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
-        return { error: error.message };
+        console.error('❌ Erro de login:', error);
+        
+        // Provide more specific error messages
+        let errorMessage = error.message;
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Email ou senha incorretos';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Email não confirmado. Verifique sua caixa de entrada.';
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = 'Muitas tentativas. Tente novamente em alguns minutos.';
+        }
+        
+        return { error: errorMessage };
       }
 
+      console.log('✅ Login realizado com sucesso!', { userId: data.user?.id });
       return {};
     } catch (error) {
-      console.error('Login failed:', error);
-      return { error: 'Erro inesperado ao fazer login' };
+      console.error('💥 Erro inesperado no login:', error);
+      return { error: 'Erro inesperado ao fazer login. Tente novamente.' };
     }
   };
 
   const signUp = async (email: string, password: string, name: string, crm: string, specialty: string): Promise<{ error?: string }> => {
     try {
+      console.log('📝 Tentando criar conta...', { email, name, crm, specialty });
+      
       const redirectUrl = `${window.location.origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
@@ -90,8 +107,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
-        return { error: error.message };
+        console.error('❌ Erro no cadastro:', error);
+        
+        // Provide more specific error messages
+        let errorMessage = error.message;
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'Este email já está cadastrado. Tente fazer login.';
+        } else if (error.message.includes('Password should be at least')) {
+          errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = 'Email inválido. Verifique o formato.';
+        }
+        
+        return { error: errorMessage };
       }
+
+      console.log('✅ Conta criada com sucesso!', { userId: data.user?.id });
 
       if (data.user && !data.session) {
         toast({
@@ -102,8 +133,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return {};
     } catch (error) {
-      console.error('Signup failed:', error);
-      return { error: 'Erro inesperado ao fazer cadastro' };
+      console.error('💥 Erro inesperado no cadastro:', error);
+      return { error: 'Erro inesperado ao fazer cadastro. Tente novamente.' };
     }
   };
 
