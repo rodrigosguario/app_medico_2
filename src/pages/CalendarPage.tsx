@@ -73,14 +73,23 @@ const CalendarPage: React.FC = () => {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   // Check if we should open the new event dialog based on URL params
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('action') === 'new') {
-      setShowEventDialog(true);
-      // Clear the URL parameter after opening the dialog
-      window.history.replaceState({}, '', location.pathname);
-    }
-  }, [location.search, location.pathname]);
+useEffect(() => {
+  const searchParams = new URLSearchParams(location.search);
+  if (searchParams.get('action') === 'new') {
+    // Set default times when opening new event dialog
+    const now = new Date();
+    const startTime = format(now, "yyyy-MM-dd'T'09:00");
+    const endTime = format(now, "yyyy-MM-dd'T'10:00");
+    setEventForm(prev => ({
+      ...prev,
+      start_time: startTime,
+      end_time: endTime
+    }));
+    setShowEventDialog(true);
+    // Clear the URL parameter after opening the dialog
+    window.history.replaceState({}, '', location.pathname);
+  }
+}, [location.search, location.pathname]);
 
   // Form state for event creation/editing
   const [eventForm, setEventForm] = useState({
@@ -125,56 +134,108 @@ const CalendarPage: React.FC = () => {
   };
 
   const resetEventForm = () => {
-    setEventForm({
-      title: '',
-      event_type: 'CONSULTA',
-      start_time: '',
-      end_time: '',
-      location: '',
-      description: '',
-      value: '',
-      status: 'CONFIRMADO',
-      hospital_id: ''
-    });
-    setCustomLocation('');
-    setEditingEvent(null);
-  };
+  setEventForm({
+    title: '',
+    event_type: 'PLANTAO',
+    start_time: '',
+    end_time: '',
+    location: '',
+    description: '',
+    value: '',
+    status: 'CONFIRMADO',
+    hospital_id: ''
+  });
+  setCustomLocation('');
+  setEditingEvent(null);
+};
 
         const handleCreateEvent = async (e: React.FormEvent) => {
-          e.preventDefault();
-          
-          try {
-            const eventData = {
-              title: eventForm.title,
-              event_type: eventForm.event_type,
-              start_date: new Date(eventForm.start_time).toISOString(),
-              end_date: new Date(eventForm.end_time).toISOString(),
-              location: eventForm.location === 'outro' ? customLocation : eventForm.location || null,
-              description: eventForm.description || null,
-              value: eventForm.value ? parseFloat(eventForm.value) : null,
-              status: eventForm.status,
-              hospital_id: hospitals.find(h => h.name === eventForm.location)?.id || null
-            };
+  e.preventDefault();
+  
+  try {
+    // Validação de campos obrigatórios
+    if (!eventForm.title.trim()) {
+      toast.error('O título é obrigatório');
+      return;
+    }
+    
+    if (!eventForm.start_time) {
+      toast.error('A data e hora de início são obrigatórias');
+      return;
+    }
+    
+    if (!eventForm.end_time) {
+      toast.error('A data e hora de fim são obrigatórias');
+      return;
+    }
 
-            if (editingEvent) {
-              await updateEvent(editingEvent.id, eventData);
-              feedbackToast.eventUpdated(eventForm.title);
-            } else {
-              await createEvent(eventData);
-              feedbackToast.eventCreated(eventForm.title);
-            }
+    // Mapeamento correto dos valores para o banco de dados
+    const eventTypeMapping = {
+      'PLANTAO': 'plantao',
+      'CONSULTA': 'consulta', 
+      'PROCEDIMENTO': 'procedimento',
+      'ACADEMICO': 'academico',
+      'REUNIAO': 'reuniao',
+      'ADMINISTRATIVO': 'administrativo'
+    };
 
-            setShowEventDialog(false);
-            resetEventForm();
-          } catch (error) {
-            console.error('Error saving event:', error);
-            toast({
-              title: "Erro ao salvar evento",
-              description: "Não foi possível salvar o evento. Tente novamente.",
-              variant: "destructive",
-            });
-          }
-        };
+    const statusMapping = {
+      'CONFIRMADO': 'confirmed',
+      'TENTATIVO': 'tentative',
+      'AGUARDANDO': 'pending',
+      'CANCELADO': 'cancelled',
+      'REALIZADO': 'completed'
+    };
+
+    const eventData = {
+      title: eventForm.title.trim(),
+      event_type: eventTypeMapping[eventForm.event_type as keyof typeof eventTypeMapping] || 'plantao',
+      start_date: new Date(eventForm.start_time).toISOString(),
+      end_date: new Date(eventForm.end_time).toISOString(),
+      location: eventForm.location === 'outro' ? customLocation : eventForm.location,
+      description: eventForm.description || null,
+      value: eventForm.value ? parseFloat(eventForm.value.toString()) : null,
+      status: statusMapping[eventForm.status as keyof typeof statusMapping] || 'confirmed',
+      user_id: user?.id
+    };
+
+    console.log('Dados do evento a serem enviados:', eventData);
+
+    if (editingEvent) {
+      const { error } = await supabase
+        .from('events')
+        .update(eventData)
+        .eq('id', editingEvent.id);
+
+      if (error) {
+        console.error('Erro ao atualizar evento:', error);
+        toast.error(`Erro ao atualizar evento: ${error.message}`);
+        return;
+      }
+
+      toast.success('Evento atualizado com sucesso!');
+    } else {
+      const { error } = await supabase
+        .from('events')
+        .insert([eventData]);
+
+      if (error) {
+        console.error('Erro ao criar evento:', error);
+        toast.error(`Erro ao criar evento: ${error.message}`);
+        return;
+      }
+
+      toast.success(`Evento criado! "${eventForm.title}" foi adicionado ao seu calendário.`);
+    }
+
+    setShowEventDialog(false);
+    resetEventForm();
+    refetch();
+  } catch (error) {
+    console.error('Erro inesperado:', error);
+    toast.error('Erro inesperado ao processar evento');
+  }
+};
 
   const handleEditEvent = (event: CalendarEvent) => {
     setEditingEvent(event);
@@ -289,15 +350,17 @@ const CalendarPage: React.FC = () => {
             !isCurrentMonth && "text-muted-foreground bg-muted/20",
             isToday && "bg-primary/10 border-primary"
           )}
-          onClick={() => {
-            setSelectedDate(currentDay);
-            setEventForm(prev => ({
-              ...prev,
-              start_time: format(currentDay, "yyyy-MM-dd'T'09:00"),
-              end_time: format(currentDay, "yyyy-MM-dd'T'10:00")
-            }));
-            setShowEventDialog(true);
-          }}
+         onClick={() => {
+  setSelectedDate(currentDay);
+  const startTime = format(currentDay, "yyyy-MM-dd'T'09:00");
+  const endTime = format(currentDay, "yyyy-MM-dd'T'10:00");
+  setEventForm(prev => ({
+    ...prev,
+    start_time: startTime,
+    end_time: endTime
+  }));
+  setShowEventDialog(true);
+}}
         >
           <div className="font-medium text-sm mb-1">
             {format(currentDay, 'd')}
@@ -540,12 +603,21 @@ const CalendarPage: React.FC = () => {
                 </DialogContent>
               </Dialog>
 
-              <Button onClick={() => setShowEventDialog(true)} className="bg-medical hover:bg-medical-dark text-medical-foreground">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Evento
-              </Button>
-            </div>
-          </div>
+<Button onClick={() => {
+  // Set default times when opening new event dialog
+  const now = new Date();
+  const startTime = format(now, "yyyy-MM-dd'T'09:00");
+  const endTime = format(now, "yyyy-MM-dd'T'10:00");
+  setEventForm(prev => ({
+    ...prev,
+    start_time: startTime,
+    end_time: endTime
+  }));
+  setShowEventDialog(true);
+}} className="bg-medical hover:bg-medical-dark text-medical-foreground">
+  <Plus className="h-4 w-4 mr-2" />
+  Novo Evento
+</Button>
 
           {/* Calendar Controls */}
           <div className="flex items-center justify-between">
