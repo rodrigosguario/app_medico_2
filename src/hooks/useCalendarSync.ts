@@ -413,10 +413,20 @@ export function useCalendarSync() {
       // Chamar a edge function para sincronização do Outlook
       if (providerId === 'outlook') {
         console.log('🔄 Sincronizando com Outlook...');
-        const syncSettings = providers.find(p => p.id === 'outlook');
         
-        // Para desenvolvimento, usar token demo se não houver token real
-        const accessToken = syncSettings?.isEnabled ? 'demo_outlook_token' : 'demo_outlook_token';
+        // Buscar configurações de sincronização do banco
+        const { data: syncSettings, error: settingsError } = await supabase
+          .from('calendar_sync_settings')
+          .select('access_token')
+          .eq('user_id', user!.id)
+          .eq('provider', 'outlook')
+          .single();
+
+        if (settingsError || !syncSettings?.access_token) {
+          throw new Error('Token do Outlook não encontrado. Reconecte o calendário.');
+        }
+
+        const accessToken = syncSettings.access_token;
 
         const { data, error } = await supabase.functions.invoke('outlook-calendar-sync', {
           body: {
@@ -433,9 +443,20 @@ export function useCalendarSync() {
         feedbackToast.syncComplete('Outlook', data?.import?.imported + data?.export?.exported || 0);
       } else if (providerId === 'icloud') {
         console.log('🔄 Sincronizando com iCloud...');
-        const syncSettings = providers.find(p => p.id === 'icloud');
+        
+        // Buscar configurações de sincronização do banco
+        const { data: syncSettings, error: settingsError } = await supabase
+          .from('calendar_sync_settings')
+          .select('access_token')
+          .eq('user_id', user!.id)
+          .eq('provider', 'icloud')
+          .single();
 
-        const credentials = syncSettings?.isEnabled ? btoa('demo:demo') : btoa('demo:demo');
+        if (settingsError || !syncSettings?.access_token) {
+          throw new Error('Credenciais do iCloud não encontradas. Reconecte o calendário.');
+        }
+
+        const credentials = syncSettings.access_token;
 
         const { data, error } = await supabase.functions.invoke('icloud-calendar-sync', {
           body: {
@@ -451,12 +472,34 @@ export function useCalendarSync() {
 
         feedbackToast.syncComplete('iCloud', data?.import?.imported + data?.export?.exported || 0);
       } else if (providerId === 'google') {
-        console.log('🔄 Sincronização Google ainda não implementada totalmente');
+        console.log('🔄 Sincronizando com Google Calendar...');
         
-        // Simulação básica para Google
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        feedbackToast.syncComplete('Google', 0);
+        // Buscar configurações de sincronização
+        const { data: syncSettings, error: settingsError } = await supabase
+          .from('calendar_sync_settings')
+          .select('access_token')
+          .eq('user_id', user!.id)
+          .eq('provider', 'google')
+          .single();
+
+        if (settingsError || !syncSettings?.access_token) {
+          throw new Error('Token do Google Calendar não encontrado. Reconecte o calendário.');
+        }
+
+        const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+          body: {
+            action: 'sync_bidirectional',
+            googleAccessToken: syncSettings.access_token,
+            userId: user!.id,
+            calendarId: 'primary'
+          }
+        });
+
+        console.log('📋 Resposta da sincronização Google:', data, error);
+
+        if (error) throw error;
+
+        feedbackToast.syncComplete('Google Calendar', data?.import?.imported + data?.export?.exported || 0);
       } else {
         feedbackToast.info('Sincronização iniciada', `Sincronizando calendário ${providerId}...`);
       }

@@ -315,6 +315,7 @@ async function syncBidirectional(supabase: any, credentials: string, userId: str
     
     throw error;
   }
+}
 
 function determineEventType(title: string): string {
   const titleLower = title.toLowerCase();
