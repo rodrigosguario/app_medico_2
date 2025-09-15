@@ -13,6 +13,33 @@ console.log("[BOOT] Vite env:", {
   MODE: import.meta.env?.MODE,
 });
 
+// Network error tracking para debug de conectividade
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('🚨 Promise rejeitada não tratada:', event.reason);
+  
+  if (event.reason?.message?.includes('Failed to fetch') ||
+      event.reason?.message?.includes('ERR_INTERNET_DISCONNECTED') ||
+      event.reason?.message?.includes('NetworkError')) {
+    console.error('🌐 Erro de rede não tratado:', {
+      reason: event.reason,
+      promise: event.promise,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Global error tracking para problemas de conectividade
+window.addEventListener('error', (event) => {
+  console.error('🚨 Erro JavaScript global:', {
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+    error: event.error,
+    timestamp: new Date().toISOString()
+  });
+});
+
 const root = document.getElementById("root");
 if (!root) {
   console.error("[BOOT] Elemento #root não encontrado em index.html");

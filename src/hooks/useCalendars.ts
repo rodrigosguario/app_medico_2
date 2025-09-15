@@ -29,9 +29,12 @@ export const useCalendars = () => {
       setError(null);
 
       if (!user) {
+        console.log('👤 Usuário não encontrado, limpando calendários');
         setCalendars([]);
         return;
       }
+
+      console.log('🔄 Carregando calendários para usuário:', user.id);
 
       const { data, error: supabaseError } = await supabase
         .from('calendars')
@@ -39,11 +42,14 @@ export const useCalendars = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
+      console.log('📋 Resposta dos calendários:', { data, error: supabaseError });
+
       if (supabaseError) throw supabaseError;
 
       if (data) {
         // If no calendars exist, create a default one
         if (data.length === 0) {
+          console.log('🆕 Nenhum calendário encontrado, criando padrão...');
           const { data: newCalendar, error: createError } = await supabase
             .from('calendars')
             .insert([{

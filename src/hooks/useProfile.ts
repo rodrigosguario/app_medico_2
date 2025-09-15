@@ -32,18 +32,22 @@ export const useProfile = () => {
       }
 
       try {
+        console.log('🔄 Buscando perfil para usuário:', user.id);
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
+        console.log('📋 Resposta do perfil:', { data, error });
+
         if (error) {
-          console.error('Error fetching profile:', error);
+          console.error('❌ Erro ao buscar perfil:', error);
           setError(error.message);
         } else if (!data) {
           // Profile doesn't exist, create it using auth metadata
-          console.log('Profile not found, creating from auth metadata...');
+          console.log('🆕 Perfil não encontrado, criando com metadados de auth...');
           
           const profileData = {
             user_id: user.id,

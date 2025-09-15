@@ -5,6 +5,12 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://kmwsoppkrjzjioeadtqb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttd3NvcHBrcmp6amlvZWFkdHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3ODkzNzYsImV4cCI6MjA3MzM2NTM3Nn0.RsQd3r30Ezfi5x_Di2eLgkqm5SCDC9tlOIXIDRJcYMY";
 
+console.log('🔧 Inicializando cliente Supabase:', {
+  url: SUPABASE_URL,
+  keyLength: SUPABASE_PUBLISHABLE_KEY?.length,
+  hasKey: !!SUPABASE_PUBLISHABLE_KEY
+});
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -13,5 +19,26 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'supabase-js-web'
+    }
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 });
+
+// Test connection on initialization
+supabase.from('profiles').select('count', { count: 'exact', head: true })
+  .then(({ error, count }) => {
+    if (error) {
+      console.error('❌ Erro de conectividade Supabase:', error.message);
+      console.error('Detalhes:', error);
+    } else {
+      console.log('✅ Supabase conectado com sucesso!', { count });
+    }
+  });
