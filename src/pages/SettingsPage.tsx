@@ -1,4 +1,4 @@
-// src/pages/Settings.tsx  (ou src/pages/SettingsPage.tsx)
+// src/pages/Settings.tsx
 import React from 'react'
 import {
   Settings as SettingsIcon,
@@ -12,13 +12,13 @@ import {
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
-// IMPORTAÇÕES como DEFAULT (compatível com os arquivos atuais)
-import ProfileTab from '@/components/settings/ProfileTab'
-import NotificationsTab from '@/components/settings/NotificationsTab'
-import HospitalsTab from '@/components/settings/HospitalsTab'
-import CalendarTab from '@/components/settings/CalendarTab'
-import DataTab from '@/components/settings/DataTab'
-import SystemTab from '@/components/settings/SystemTab'
+// ✅ Use exports NOMEADOS (entre chaves) — compatível com o seu projeto
+import { ProfileTab } from '@/components/settings/ProfileTab'
+import { NotificationsTab } from '@/components/settings/NotificationsTab'
+import { HospitalsTab } from '@/components/settings/HospitalsTab'
+import { CalendarTab } from '@/components/settings/CalendarTab'
+import { DataTab } from '@/components/settings/DataTab'
+import { SystemTab } from '@/components/settings/SystemTab'
 
 export default function SettingsPage() {
   return (
