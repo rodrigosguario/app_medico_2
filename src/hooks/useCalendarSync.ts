@@ -461,19 +461,49 @@ export function useCalendarSync() {
     try {
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
       console.log('💾 Salvando configurações gerais:', settings);
 
-      const { error } = await supabase
+      // First, try to get existing general settings
+      const { data: existing } = await supabase
         .from('calendar_sync_settings')
-        .upsert({
-          user_id: user.id,
-          provider: 'general',
-          is_enabled: true,
-          settings: JSON.stringify(settings),
-          updated_at: new Date().toISOString()
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('provider', 'general')
+        .single();
 
-      if (error) throw error;
+      if (existing) {
+        // Update existing record
+        const { error } = await supabase
+          .from('calendar_sync_settings')
+          .update({
+            settings: settings,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('calendar_sync_settings')
+          .insert({
+            user_id: user.id,
+            provider: 'general',
+            is_enabled: true,
+            settings: settings,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+
       console.log('✅ Configurações gerais salvas');
     } catch (error) {
       console.error('❌ Erro ao salvar configurações gerais:', error);
@@ -492,16 +522,22 @@ export function useCalendarSync() {
         .select('settings')
         .eq('user_id', user.id)
         .eq('provider', 'general')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) {
+        console.error('❌ Erro ao carregar configurações gerais:', error);
+        return {};
+      }
 
       if (data?.settings) {
-        const settings = JSON.parse(data.settings as string);
+        const settings = typeof data.settings === 'string' 
+          ? JSON.parse(data.settings) 
+          : data.settings;
         console.log('✅ Configurações gerais carregadas:', settings);
         return settings;
       }
 
+      console.log('ℹ️ Nenhuma configuração geral encontrada, usando padrões');
       return {};
     } catch (error) {
       console.error('❌ Erro ao carregar configurações gerais:', error);

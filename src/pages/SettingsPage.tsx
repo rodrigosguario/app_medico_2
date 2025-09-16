@@ -358,16 +358,38 @@ export default function SettingsPage() {
                   <Label htmlFor="tax_type">Tipo de Tributação</Label>
                   <Select 
                     value={profileForm.tax_type} 
-                    onValueChange={(value: any) => setProfileForm(prev => ({ ...prev, tax_type: value }))}
+                    onValueChange={(value: any) => {
+                      // Auto-set tax rate based on company type
+                      let defaultRate = 6.00;
+                      switch (value) {
+                        case 'mei':
+                          defaultRate = 6.00;
+                          break;
+                        case 'simples_nacional':
+                          defaultRate = 11.00;
+                          break;
+                        case 'lucro_presumido':
+                          defaultRate = 15.00;
+                          break;
+                        case 'lucro_real':
+                          defaultRate = 25.00;
+                          break;
+                      }
+                      setProfileForm(prev => ({ 
+                        ...prev, 
+                        tax_type: value,
+                        tax_rate: defaultRate 
+                      }));
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
-                      <SelectItem value="mei">MEI</SelectItem>
-                      <SelectItem value="lucro_presumido">Lucro Presumido</SelectItem>
-                      <SelectItem value="lucro_real">Lucro Real</SelectItem>
+                      <SelectItem value="mei">MEI (6%)</SelectItem>
+                      <SelectItem value="simples_nacional">Simples Nacional (11%)</SelectItem>
+                      <SelectItem value="lucro_presumido">Lucro Presumido (15%)</SelectItem>
+                      <SelectItem value="lucro_real">Lucro Real (25%)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

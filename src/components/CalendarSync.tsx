@@ -70,11 +70,22 @@ export const CalendarSync: React.FC = () => {
 
   const saveSettings = async (newSettings: { autoSync?: boolean; syncNotifications?: boolean; bidirectionalSync?: boolean }) => {
     try {
+      console.log('💾 Salvando configurações de sincronização:', newSettings);
       await saveGeneralSettings(newSettings);
       feedbackToast.success('Configurações salvas', 'Suas preferências foram atualizadas.');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      feedbackToast.error('Erro ao salvar', 'Não foi possível salvar as configurações.');
+    } catch (error: any) {
+      console.error('❌ Erro ao salvar configurações:', error);
+      
+      let errorMessage = 'Não foi possível salvar as configurações.';
+      if (error?.message && error.message.includes('JWT')) {
+        errorMessage = 'Sessão expirada. Faça login novamente.';
+      } else if (error?.message && error.message.includes('permission')) {
+        errorMessage = 'Sem permissão para salvar configurações.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      feedbackToast.error('Erro ao salvar', errorMessage);
     }
   };
 

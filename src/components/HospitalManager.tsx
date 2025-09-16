@@ -43,11 +43,12 @@ const HospitalManager: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja remover este hospital?')) {
+    if (window.confirm('Tem certeza que deseja remover este hospital?')) {
       try {
+        console.log('🗑️ Removendo hospital:', id);
         await deleteHospital(id);
       } catch (error) {
-        // Error is handled in the hook
+        console.error('❌ Erro ao remover hospital:', error);
       }
     }
   };
