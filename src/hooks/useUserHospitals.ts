@@ -23,7 +23,10 @@ export const useUserHospitals = () => {
   const { toast } = useToast();
 
   const loadUserHospitals = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -52,6 +55,8 @@ export const useUserHospitals = () => {
       if (data) {
         console.log('✅ Hospitais carregados:', data.length);
         setHospitals(data);
+      } else {
+        setHospitals([]);
       }
     } catch (error) {
       console.error('💥 Erro ao carregar hospitais:', error);
@@ -68,6 +73,7 @@ export const useUserHospitals = () => {
       }
       
       setError(errorMessage);
+      setHospitals([]); // Clear hospitals on error
     } finally {
       setLoading(false);
     }
@@ -246,9 +252,8 @@ export const useUserHospitals = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      loadUserHospitals();
-    }
+    // Always call loadUserHospitals when user changes
+    loadUserHospitals();
   }, [user]);
 
   return {

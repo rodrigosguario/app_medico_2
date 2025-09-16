@@ -129,26 +129,20 @@ Posso analisar seus dados reais e fornecer insights específicos para o seu perf
         crm: user.user_metadata?.crm || 'N/A'
       } : null;
 
-      // Call AI assistant edge function with proper URL
-      const supabaseUrl = 'https://kmwsoppkrjzjioeadtqb.supabase.co';
-      const response = await fetch(`${supabaseUrl}/functions/v1/ai-assistant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-        body: JSON.stringify({
+      // Call AI assistant edge function
+      const response = await supabase.functions.invoke('ai-assistant', {
+        body: {
           message: messageText,
           userId: user?.id,
           includeData: true
-        }),
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro na edge function');
       }
 
-      const data = await response.json();
+      const data = response.data;
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

@@ -331,22 +331,30 @@ export const CalendarSync: React.FC = () => {
       </TabsList>
 
       <TabsContent value="sync" className="space-y-6">
-        {/* Connection Guide */}
+        {/* Configuration Guide */}
         <Alert>
           <Link className="h-4 w-4" />
           <AlertDescription>
-            Para conectar seus calendários, você precisa configurar as credenciais OAuth. 
-            <Button variant="link" className="p-0 h-auto ml-1" asChild>
-              <a href="https://console.developers.google.com/" target="_blank" rel="noopener noreferrer">
-                Configurar Google Calendar
-              </a>
-            </Button>
-            {' | '}
-            <Button variant="link" className="p-0 h-auto" asChild>
-              <a href="https://portal.azure.com/" target="_blank" rel="noopener noreferrer">
-                Configurar Microsoft
-              </a>
-            </Button>
+            <strong>Configuração Necessária:</strong> Para usar as integrações de calendário, configure as credenciais OAuth nos respectivos portais de desenvolvedores.
+            <div className="flex gap-2 mt-2">
+              <Button variant="link" className="p-0 h-auto text-xs" asChild>
+                <a href="https://console.developers.google.com/" target="_blank" rel="noopener noreferrer">
+                  Google Cloud Console
+                </a>
+              </Button>
+              <span className="text-xs">•</span>
+              <Button variant="link" className="p-0 h-auto text-xs" asChild>
+                <a href="https://portal.azure.com/" target="_blank" rel="noopener noreferrer">
+                  Azure Portal
+                </a>
+              </Button>
+              <span className="text-xs">•</span>
+              <Button variant="link" className="p-0 h-auto text-xs" asChild>
+                <a href="https://appleid.apple.com/" target="_blank" rel="noopener noreferrer">
+                  Apple ID (para senha de app)
+                </a>
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
 
