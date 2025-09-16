@@ -8,8 +8,7 @@ import {
   Settings, 
   LogOut,
   Stethoscope,
-  Plus,
-  TestTube
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -76,12 +75,6 @@ const Navigation: React.FC = () => {
       path: '/offline',
       icon: WifiOff,
       color: 'muted'
-    },
-    {
-      name: 'Testes',
-      path: '/test',
-      icon: TestTube,
-      color: 'secondary'
     }
   ];
 
@@ -153,13 +146,6 @@ const Navigation: React.FC = () => {
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configurações</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="cursor-pointer"
-                    onClick={() => navigate('/test')}
-                  >
-                    <TestTube className="mr-2 h-4 w-4" />
-                    <span>Testes do Sistema</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer text-destructive" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />

@@ -13,7 +13,6 @@ import FinancialPage from "./pages/FinancialPage";
 import ImportExportPage from "./pages/ImportExportPage";
 import OfflinePage from "./pages/OfflinePage";
 import SettingsPage from "./pages/SettingsPage";
-import TestPage from "./pages/TestPage";
 import NotFound from "./pages/NotFound";
 import { MobileOptimization } from '@/components/MobileOptimization';
 
@@ -35,7 +34,6 @@ const App = () => (
             <Route path="/import-export" element={<ImportExportPage />} />
             <Route path="/offline" element={<OfflinePage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/test" element={<TestPage />} />
             {/* catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
