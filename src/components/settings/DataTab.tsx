@@ -39,15 +39,11 @@ export const DataTab: React.FC = () => {
         .eq('user_id', user.id)
         .single();
 
-      // Get notification preferences from localStorage
-      const notifications = JSON.parse(localStorage.getItem('notifications_preferences') || '{}');
-
       const exportData = {
         profile,
         events,
         financials,
         hospitals,
-        notifications,
         exportDate: new Date().toISOString()
       };
 

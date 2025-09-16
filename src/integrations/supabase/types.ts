@@ -305,41 +305,56 @@ export type Database = {
         Row: {
           created_at: string
           crm: string | null
+          daily_reminders: boolean | null
           email: string
+          email_alerts: boolean | null
           id: string
           name: string
           phone: string | null
+          push_notifications: boolean | null
           specialty: string | null
+          sync_notifications: boolean | null
           tax_rate: number | null
           tax_type: string | null
           updated_at: string
           user_id: string
+          weekly_reports: boolean | null
         }
         Insert: {
           created_at?: string
           crm?: string | null
+          daily_reminders?: boolean | null
           email: string
+          email_alerts?: boolean | null
           id?: string
           name: string
           phone?: string | null
+          push_notifications?: boolean | null
           specialty?: string | null
+          sync_notifications?: boolean | null
           tax_rate?: number | null
           tax_type?: string | null
           updated_at?: string
           user_id: string
+          weekly_reports?: boolean | null
         }
         Update: {
           created_at?: string
           crm?: string | null
+          daily_reminders?: boolean | null
           email?: string
+          email_alerts?: boolean | null
           id?: string
           name?: string
           phone?: string | null
+          push_notifications?: boolean | null
           specialty?: string | null
+          sync_notifications?: boolean | null
           tax_rate?: number | null
           tax_type?: string | null
           updated_at?: string
           user_id?: string
+          weekly_reports?: boolean | null
         }
         Relationships: []
       }

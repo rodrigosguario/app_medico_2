@@ -4,9 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/components/AuthGuard';
+import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
 export const NotificationsTab: React.FC = () => {
+  const { user } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,33 +24,78 @@ export const NotificationsTab: React.FC = () => {
     dailyReminders: true
   });
 
-  // Load notification preferences
+  // Load notification preferences from profile
   useEffect(() => {
-    const savedNotifications = localStorage.getItem('notifications_preferences');
-    if (savedNotifications) {
-      try {
-        setNotifications(JSON.parse(savedNotifications));
-      } catch (error) {
-        console.error('Error loading notification preferences:', error);
-      }
+    if (profile && !profileLoading) {
+      setNotifications({
+        emailAlerts: (profile as any).email_alerts ?? true,
+        pushNotifications: (profile as any).push_notifications ?? true,
+        syncNotifications: (profile as any).sync_notifications ?? true,
+        weeklyReports: (profile as any).weekly_reports ?? false,
+        dailyReminders: (profile as any).daily_reminders ?? true
+      });
     }
-  }, []);
+  }, [profile, profileLoading]);
 
   const handleNotificationsSave = async () => {
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Usuário não autenticado. Faça login novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Store in localStorage
-      localStorage.setItem('notifications_preferences', JSON.stringify(notifications));
-      
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
+      console.log('💾 Salvando preferências de notificação...', notifications);
+
+      // Save to Supabase profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          email_alerts: notifications.emailAlerts,
+          push_notifications: notifications.pushNotifications,
+          sync_notifications: notifications.syncNotifications,
+          weekly_reports: notifications.weeklyReports,
+          daily_reminders: notifications.dailyReminders
+        });
+
+      if (error) {
+        console.error('❌ Erro ao salvar preferências:', error);
+        throw error;
+      }
+
+      console.log('✅ Preferências salvas com sucesso');
       toast({
         title: 'Preferências salvas',
         description: 'Suas configurações de notificação foram atualizadas.',
       });
     } catch (error) {
-      console.error('Error saving notifications:', error);
+      console.error('💥 Erro inesperado ao salvar:', error);
+      
+      let errorMessage = 'Não foi possível salvar as preferências.';
+      if (error instanceof Error) {
+        if (error.message.includes('JWT') || error.message.includes('Sessão expirada')) {
+          errorMessage = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('permission') || error.message.includes('Forbidden')) {
+          errorMessage = 'Sem permissão para salvar dados.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro ao salvar',
-        description: 'Não foi possível salvar as preferências.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -59,6 +109,15 @@ export const NotificationsTab: React.FC = () => {
       [key]: value
     }));
   };
+
+  if (profileLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Carregando preferências...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
