@@ -7,10 +7,9 @@ import { useAuth } from '@/components/AuthGuard';
 import { 
   CheckCircle, 
   AlertCircle, 
-  Wifi, 
-  Database, 
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 
 interface SystemCheck {
@@ -100,8 +99,31 @@ export const SystemTab: React.FC = () => {
         });
       }
 
+      // Check session validity
+      if (user) {
+        try {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          checks.push({
+            name: 'Sessão Ativa',
+            status: (sessionError || !session) ? 'error' : 'success',
+            message: (sessionError || !session) ? 'Sessão expirada ou inválida' : 'Sessão válida e ativa'
+          });
+        } catch (error) {
+          checks.push({
+            name: 'Sessão Ativa',
+            status: 'error',
+            message: 'Erro ao verificar sessão'
+          });
+        }
+      }
+
     } catch (error) {
       console.error('Error running system checks:', error);
+      checks.push({
+        name: 'Sistema Geral',
+        status: 'error',
+        message: 'Erro ao executar verificações do sistema'
+      });
     }
 
     setSystemChecks(checks);
@@ -137,6 +159,15 @@ export const SystemTab: React.FC = () => {
         return <Badge variant="outline">Desconhecido</Badge>;
     }
   };
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Carregando...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -193,6 +224,14 @@ export const SystemTab: React.FC = () => {
               <span className="font-medium">Modo:</span>
               <span className="ml-2 text-muted-foreground">Produção</span>
             </div>
+            <div>
+              <span className="font-medium">Usuário:</span>
+              <span className="ml-2 text-muted-foreground">{user?.email || 'N/A'}</span>
+            </div>
+            <div>
+              <span className="font-medium">ID do Projeto:</span>
+              <span className="ml-2 text-muted-foreground">kmwsoppkrjzjioeadtqb</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -218,6 +257,12 @@ export const SystemTab: React.FC = () => {
             <a href="https://ui.shadcn.com" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4 mr-2" />
               Componentes UI (shadcn/ui)
+            </a>
+          </Button>
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <a href={`https://supabase.com/dashboard/project/kmwsoppkrjzjioeadtqb`} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Dashboard Supabase
             </a>
           </Button>
         </CardContent>

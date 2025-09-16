@@ -12,10 +12,25 @@ export const DataTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleExportData = async () => {
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Usuário não autenticado. Faça login novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       
-      if (!user) throw new Error('Usuário não autenticado');
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
+      console.log('📤 Exportando dados do usuário:', user.id);
 
       // Export user data (events, profile, hospitals, etc.)
       const { data: events } = await supabase
@@ -39,13 +54,27 @@ export const DataTab: React.FC = () => {
         .eq('user_id', user.id)
         .single();
 
+      const { data: calendars } = await supabase
+        .from('calendars')
+        .select('*')
+        .eq('user_id', user.id);
+
       const exportData = {
         profile,
-        events,
-        financials,
-        hospitals,
-        exportDate: new Date().toISOString()
+        events: events || [],
+        financials: financials || [],
+        hospitals: hospitals || [],
+        calendars: calendars || [],
+        exportDate: new Date().toISOString(),
+        exportedBy: user.email
       };
+
+      console.log('✅ Dados coletados:', {
+        events: events?.length || 0,
+        financials: financials?.length || 0,
+        hospitals: hospitals?.length || 0,
+        calendars: calendars?.length || 0
+      });
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -60,10 +89,22 @@ export const DataTab: React.FC = () => {
         description: 'Backup dos seus dados baixado com sucesso.',
       });
     } catch (error) {
-      console.error('Error exporting data:', error);
+      console.error('💥 Erro na exportação:', error);
+      
+      let errorMessage = 'Não foi possível exportar os dados.';
+      if (error instanceof Error) {
+        if (error.message.includes('JWT') || error.message.includes('Sessão expirada')) {
+          errorMessage = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('permission') || error.message.includes('Forbidden')) {
+          errorMessage = 'Sem permissão para acessar dados.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro na exportação',
-        description: 'Não foi possível exportar os dados.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
