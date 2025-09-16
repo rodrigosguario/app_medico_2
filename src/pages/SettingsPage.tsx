@@ -34,6 +34,22 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Helper function to get default tax rates
+  const getDefaultTaxRate = (taxType: string): number => {
+    switch (taxType) {
+      case 'mei':
+        return 6.00;
+      case 'simples_nacional':
+        return 11.00;
+      case 'lucro_presumido':
+        return 15.00;
+      case 'lucro_real':
+        return 25.00;
+      default:
+        return 6.00;
+    }
+  };
+
   // Profile form state
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -42,7 +58,7 @@ export default function SettingsPage() {
     specialty: '',
     phone: '',
     tax_rate: 6.00,
-    tax_type: 'simples_nacional' as 'simples_nacional' | 'mei' | 'lucro_presumido' | 'lucro_real'
+    tax_type: 'mei' as 'simples_nacional' | 'mei' | 'lucro_presumido' | 'lucro_real'
   });
 
   // Notification preferences
@@ -63,8 +79,8 @@ export default function SettingsPage() {
         crm: profile.crm || '',
         specialty: profile.specialty || '',
         phone: profile.phone || '',
-        tax_rate: profile.tax_rate || 6.00,
-        tax_type: (profile.tax_type as 'simples_nacional' | 'mei' | 'lucro_presumido' | 'lucro_real') || 'simples_nacional'
+        tax_rate: profile.tax_rate || getDefaultTaxRate(profile.tax_type || 'mei'),
+        tax_type: (profile.tax_type as 'simples_nacional' | 'mei' | 'lucro_presumido' | 'lucro_real') || 'mei'
       });
     } else if (user && !profileLoading) {
       // Initialize with user metadata if no profile exists
@@ -73,7 +89,9 @@ export default function SettingsPage() {
         name: user.user_metadata?.name || '',
         email: user.email || '',
         crm: user.user_metadata?.crm || '',
-        specialty: user.user_metadata?.specialty || ''
+        specialty: user.user_metadata?.specialty || '',
+        tax_rate: 6.00,
+        tax_type: 'mei'
       }));
     }
   }, [profile, user, profileLoading]);
@@ -110,18 +128,21 @@ export default function SettingsPage() {
 
       console.log('💾 Salvando perfil...', profileForm);
 
+      // Ensure tax_rate is a number
+      const dataToSave = {
+        user_id: user.id,
+        name: profileForm.name,
+        email: profileForm.email,
+        crm: profileForm.crm,
+        specialty: profileForm.specialty,
+        phone: profileForm.phone,
+        tax_rate: Number(profileForm.tax_rate),
+        tax_type: profileForm.tax_type,
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: user.id,
-          name: profileForm.name,
-          email: profileForm.email,
-          crm: profileForm.crm,
-          specialty: profileForm.specialty,
-          phone: profileForm.phone,
-          tax_rate: profileForm.tax_rate,
-          tax_type: profileForm.tax_type,
-        });
+        .upsert(dataToSave);
 
       if (error) {
         console.error('❌ Erro ao salvar perfil:', error);
@@ -360,21 +381,7 @@ export default function SettingsPage() {
                     value={profileForm.tax_type} 
                     onValueChange={(value: any) => {
                       // Auto-set tax rate based on company type
-                      let defaultRate = 6.00;
-                      switch (value) {
-                        case 'mei':
-                          defaultRate = 6.00;
-                          break;
-                        case 'simples_nacional':
-                          defaultRate = 11.00;
-                          break;
-                        case 'lucro_presumido':
-                          defaultRate = 15.00;
-                          break;
-                        case 'lucro_real':
-                          defaultRate = 25.00;
-                          break;
-                      }
+                      const defaultRate = getDefaultTaxRate(value);
                       setProfileForm(prev => ({ 
                         ...prev, 
                         tax_type: value,
