@@ -49,7 +49,7 @@ function fnUrl(fn: string) {
   return `${base}/functions/v1/${fn}`
 }
 
-export default function CalendarTab() {
+export function CalendarTab() {
   const [loading, setLoading] = useState(true)
   const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>({
     google: { ...PROVIDERS.google, status: 'disconnected' },
@@ -109,12 +109,11 @@ export default function CalendarTab() {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      // IMPORTANTE: enviamos userId junto, pois as functions estão exigindo isso
       body: JSON.stringify({ userId, ...body }),
     })
     const text = await res.text()
     let json: any = null
-    try { json = text ? JSON.parse(text) : null } catch { /* keep raw text */ }
+    try { json = text ? JSON.parse(text) : null } catch { /* raw text */ }
     if (!res.ok) {
       const msg = json?.message || json?.error || text || 'Erro na função'
       throw new Error(msg)
@@ -132,7 +131,6 @@ export default function CalendarTab() {
 
       const result = await callFunction(fn, { action: 'connect' })
 
-      // Se a function retornar uma URL de autorização, redirecionamos
       if (result?.authUrl) {
         window.location.href = result.authUrl as string
         return
@@ -248,3 +246,5 @@ export default function CalendarTab() {
     </div>
   )
 }
+
+export default CalendarTab
