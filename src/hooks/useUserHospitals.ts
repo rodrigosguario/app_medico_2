@@ -29,6 +29,14 @@ export const useUserHospitals = () => {
       setLoading(true);
       setError(null);
 
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
+      console.log('📋 Carregando hospitais do usuário:', user.id);
+
       const { data, error: supabaseError } = await supabase
         .from('hospitals')
         .select('*')
@@ -36,14 +44,30 @@ export const useUserHospitals = () => {
         .eq('is_active', true)
         .order('name', { ascending: true });
 
-      if (supabaseError) throw supabaseError;
+      if (supabaseError) {
+        console.error('❌ Erro ao carregar hospitais:', supabaseError);
+        throw supabaseError;
+      }
 
       if (data) {
+        console.log('✅ Hospitais carregados:', data.length);
         setHospitals(data);
       }
     } catch (error) {
-      console.error('Error loading user hospitals:', error);
-      setError(error instanceof Error ? error.message : 'Erro ao carregar hospitais');
+      console.error('💥 Erro ao carregar hospitais:', error);
+      
+      let errorMessage = 'Erro ao carregar hospitais';
+      if (error instanceof Error) {
+        if (error.message.includes('JWT') || error.message.includes('Sessão expirada')) {
+          errorMessage = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('permission') || error.message.includes('Forbidden')) {
+          errorMessage = 'Sem permissão para acessar hospitais.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -53,6 +77,14 @@ export const useUserHospitals = () => {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
+      console.log('🏥 Criando hospital:', hospitalData);
+      
       const { data, error } = await supabase
         .from('hospitals')
         .insert([{
@@ -63,9 +95,13 @@ export const useUserHospitals = () => {
         .select('*')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao criar hospital:', error);
+        throw error;
+      }
 
       if (data) {
+        console.log('✅ Hospital criado:', data);
         setHospitals(prev => [...prev, data]);
         toast({
           title: 'Hospital adicionado',
@@ -75,7 +111,21 @@ export const useUserHospitals = () => {
 
       return data;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao criar hospital';
+      console.error('💥 Erro ao criar hospital:', error);
+      
+      let message = 'Erro ao criar hospital';
+      if (error instanceof Error) {
+        if (error.message.includes('JWT') || error.message.includes('Sessão expirada')) {
+          message = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('permission') || error.message.includes('Forbidden')) {
+          message = 'Sem permissão para criar hospital.';
+        } else if (error.message.includes('violates')) {
+          message = 'Dados inválidos ou duplicados.';
+        } else {
+          message = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro ao criar',
         description: message,
@@ -89,6 +139,14 @@ export const useUserHospitals = () => {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
+      console.log('🔄 Atualizando hospital:', { id, updates });
+      
       const { data, error } = await supabase
         .from('hospitals')
         .update(updates)
@@ -97,9 +155,13 @@ export const useUserHospitals = () => {
         .select('*')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao atualizar hospital:', error);
+        throw error;
+      }
 
       if (data) {
+        console.log('✅ Hospital atualizado:', data);
         setHospitals(prev => prev.map(h => h.id === id ? data : h));
         toast({
           title: 'Hospital atualizado',
@@ -109,7 +171,19 @@ export const useUserHospitals = () => {
 
       return data;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao atualizar hospital';
+      console.error('💥 Erro ao atualizar hospital:', error);
+      
+      let message = 'Erro ao atualizar hospital';
+      if (error instanceof Error) {
+        if (error.message.includes('JWT') || error.message.includes('Sessão expirada')) {
+          message = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('permission') || error.message.includes('Forbidden')) {
+          message = 'Sem permissão para atualizar hospital.';
+        } else {
+          message = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro ao atualizar',
         description: message,
@@ -123,21 +197,45 @@ export const useUserHospitals = () => {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
+      console.log('🗑️ Removendo hospital:', id);
+      
       const { error } = await supabase
         .from('hospitals')
         .update({ is_active: false })
         .eq('id', id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao remover hospital:', error);
+        throw error;
+      }
 
+      console.log('✅ Hospital removido com sucesso');
       setHospitals(prev => prev.filter(h => h.id !== id));
       toast({
         title: 'Hospital removido',
         description: 'Hospital removido com sucesso.',
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao remover hospital';
+      console.error('💥 Erro ao remover hospital:', error);
+      
+      let message = 'Erro ao remover hospital';
+      if (error instanceof Error) {
+        if (error.message.includes('JWT') || error.message.includes('Sessão expirada')) {
+          message = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('permission') || error.message.includes('Forbidden')) {
+          message = 'Sem permissão para remover hospital.';
+        } else {
+          message = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro ao remover',
         description: message,

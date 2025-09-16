@@ -86,6 +86,12 @@ const SettingsPage: React.FC = () => {
 
     setIsLoading(true);
     try {
+      // Validate session before making request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
       console.log('💾 Salvando perfil...', profileForm);
 
       const { error } = await supabase
@@ -116,10 +122,12 @@ const SettingsPage: React.FC = () => {
       
       let errorMessage = 'Erro desconhecido';
       if (error instanceof Error) {
-        if (error.message.includes('JWT')) {
+        if (error.message.includes('JWT') || error.message.includes('Sessão expirada')) {
           errorMessage = 'Sessão expirada. Faça login novamente.';
-        } else if (error.message.includes('permission')) {
+        } else if (error.message.includes('permission') || error.message.includes('Forbidden')) {
           errorMessage = 'Sem permissão para salvar dados.';
+        } else if (error.message.includes('violates')) {
+          errorMessage = 'Dados inválidos ou em conflito.';
         } else {
           errorMessage = error.message;
         }
