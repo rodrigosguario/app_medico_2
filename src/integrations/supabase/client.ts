@@ -1,17 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-if (!supabaseUrl) {
-  console.error('VITE_SUPABASE_URL não está definida')
-  throw new Error('VITE_SUPABASE_URL é obrigatória')
-}
-
-if (!supabaseAnonKey) {
-  console.error('VITE_SUPABASE_PUBLISHABLE_KEY não está definida')
-  throw new Error('VITE_SUPABASE_PUBLISHABLE_KEY é obrigatória')
-}
+const supabaseUrl = 'https://kmwsoppkrjzjioeadtqb.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttd3NvcHBrcmp6amlvZWFkdHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3ODkzNzYsImV4cCI6MjA3MzM2NTM3Nn0.RsQd3r30Ezfi5x_Di2eLgkqm5SCDC9tlOIXIDRJcYMY'
 
 console.log('Configurando Supabase client...')
 console.log('URL:', supabaseUrl)
@@ -47,9 +37,6 @@ supabase.from('profiles').select('count', { count: 'exact', head: true })
     } else {
       console.log('✅ Supabase conectado com sucesso. Perfis encontrados:', count)
     }
-  })
-  .catch(err => {
-    console.error('❌ Falha na conectividade Supabase:', err)
   })
 
 // Log de eventos de autenticação
