@@ -26,20 +26,21 @@ const PROVIDERS: Record<ProviderId, Omit<ProviderState, 'status'>> = {
 
 function fmt(ts?: string | null) {
   if (!ts) return '—'
-  try {
-    const d = new Date(ts)
-    return d.toLocaleString()
-  } catch {
-    return ts
-  }
+  try { return new Date(ts).toLocaleString() } catch { return ts }
 }
 
-async function getAccessToken() {
-  const { data, error } = await supabase.auth.getSession()
-  if (error) throw error
-  const token = data?.session?.access_token
-  if (!token) throw new Error('Usuário não autenticado')
-  return token
+async function getSessionAndUser() {
+  const [{ data: sessionData, error: sErr }, { data: userData, error: uErr }] = await Promise.all([
+    supabase.auth.getSession(),
+    supabase.auth.getUser()
+  ])
+  if (sErr) throw sErr
+  if (uErr) throw uErr
+  const accessToken = sessionData?.session?.access_token
+  const userId = userData?.user?.id
+  if (!accessToken) throw new Error('Usuário não autenticado (sem token)')
+  if (!userId) throw new Error('Usuário não autenticado (sem userId)')
+  return { accessToken, userId }
 }
 
 function fnUrl(fn: string) {
@@ -48,7 +49,7 @@ function fnUrl(fn: string) {
   return `${base}/functions/v1/${fn}`
 }
 
-export function CalendarTab() {
+export default function CalendarTab() {
   const [loading, setLoading] = useState(true)
   const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>({
     google: { ...PROVIDERS.google, status: 'disconnected' },
@@ -59,20 +60,14 @@ export function CalendarTab() {
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const token = await getAccessToken()
-
-      // Busca status das credenciais no backend
-      // Esperado: uma view/tabela 'calendar_credentials' com provider_id, connected_at, last_sync_at, user_id
-      const { data, error } = await supabase
+      const { error, data } = await supabase
         .from('calendar_credentials')
         .select('provider_id, last_sync_at')
-        .order('provider_id')
 
-      if (error) throw error
+      if (error && error.code !== 'PGRST116') throw error
 
       const next = { ...providers }
-      // zera
-      (Object.keys(next) as ProviderId[]).forEach((p) => {
+      ;(Object.keys(next) as ProviderId[]).forEach((p) => {
         next[p] = { ...next[p], status: 'disconnected', lastSync: null, error: null }
       })
 
@@ -91,11 +86,15 @@ export function CalendarTab() {
       setProviders(next)
     } catch (e: any) {
       console.error('Erro ao carregar provedores:', e)
-      toast({ title: 'Erro ao carregar', description: e?.message ?? 'Falha ao carregar status', variant: 'destructive' })
+      toast({
+        title: 'Erro ao carregar',
+        description: e?.message ?? 'Falha ao carregar status',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -103,18 +102,19 @@ export function CalendarTab() {
   }, [load])
 
   async function callFunction(fnName: string, body: any) {
-    const token = await getAccessToken()
+    const { accessToken, userId } = await getSessionAndUser()
     const res = await fetch(fnUrl(fnName), {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      // IMPORTANTE: enviamos userId junto, pois as functions estão exigindo isso
+      body: JSON.stringify({ userId, ...body }),
     })
     const text = await res.text()
     let json: any = null
-    try { json = text ? JSON.parse(text) : null } catch { /* retorna texto cru abaixo */ }
+    try { json = text ? JSON.parse(text) : null } catch { /* keep raw text */ }
     if (!res.ok) {
       const msg = json?.message || json?.error || text || 'Erro na função'
       throw new Error(msg)
@@ -130,8 +130,14 @@ export function CalendarTab() {
         : provider === 'outlook' ? 'outlook-calendar-sync'
         : 'icloud-calendar-sync'
 
-      // A função deve iniciar o fluxo OAuth (ou para iCloud, validar credenciais) e armazenar tokens
-      await callFunction(fn, { action: 'connect' })
+      const result = await callFunction(fn, { action: 'connect' })
+
+      // Se a function retornar uma URL de autorização, redirecionamos
+      if (result?.authUrl) {
+        window.location.href = result.authUrl as string
+        return
+      }
+
       toast({ title: `${PROVIDERS[provider].name}`, description: 'Conectado com sucesso.' })
       await load()
     } catch (e: any) {
@@ -148,7 +154,6 @@ export function CalendarTab() {
         provider === 'google' ? 'google-calendar-sync'
         : provider === 'outlook' ? 'outlook-calendar-sync'
         : 'icloud-calendar-sync'
-
       await callFunction(fn, { action: 'disconnect' })
       toast({ title: `${PROVIDERS[provider].name}`, description: 'Conta desconectada.' })
       await load()
@@ -166,11 +171,9 @@ export function CalendarTab() {
         provider === 'google' ? 'google-calendar-sync'
         : provider === 'outlook' ? 'outlook-calendar-sync'
         : 'icloud-calendar-sync'
-
       const result = await callFunction(fn, { action: 'sync' })
       const info = Array.isArray(result?.synced) ? `${result.synced.length} eventos` : 'Sincronização disparada'
       toast({ title: `${PROVIDERS[provider].name}`, description: info })
-
       setProviders((prev) => ({
         ...prev,
         [provider]: { ...prev[provider], status: 'connected', lastSync: new Date().toISOString(), error: null },
@@ -202,13 +205,7 @@ export function CalendarTab() {
           <div className="text-sm text-muted-foreground">
             Última sincronização: {fmt(p.lastSync)}
           </div>
-
-          {p.error && (
-            <div className="text-sm text-red-600">
-              {p.error}
-            </div>
-          )}
-
+          {p.error && <div className="text-sm text-red-600">{p.error}</div>}
           <div className="flex gap-2">
             {p.status !== 'connected' ? (
               <Button onClick={() => connect(p.id)} disabled={p.status === 'syncing'}>
@@ -238,9 +235,7 @@ export function CalendarTab() {
       <div className="text-sm text-muted-foreground">
         Conecte suas contas de calendário e sincronize seus plantões automaticamente.
       </div>
-
       <Separator />
-
       {loading ? (
         <div className="text-sm text-muted-foreground">Carregando...</div>
       ) : (
@@ -253,5 +248,3 @@ export function CalendarTab() {
     </div>
   )
 }
-
-export default CalendarTab
