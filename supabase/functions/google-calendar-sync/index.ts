@@ -1,255 +1,244 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// supabase/functions/google-calendar-sync/index.ts
+// Deno Deploy (Edge Function) – Google Calendar OAuth + armazenamento dos tokens
+// Fluxo:
+//  - POST /functions/v1/google-calendar-sync  { action: "connect", userId }
+//      -> retorna { authUrl } para redirecionar o usuário ao Google
+//  - GET  /functions/v1/google-calendar-sync/callback?code=...&state=<userId>
+//      -> troca "code" por tokens e salva em "calendar_credentials"
+//  - POST /functions/v1/google-calendar-sync  { action: "disconnect", userId }
+//      -> remove credenciais
+//  - POST /functions/v1/google-calendar-sync  { action: "sync", userId }
+//      -> (stub) verifica credenciais; aqui você pode puxar eventos etc.
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+// CORS básico
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const { action, googleAccessToken, userId, calendarId = 'primary' } = await req.json();
-    
-    if (!googleAccessToken || !userId) {
-      throw new Error('Missing required parameters');
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    switch (action) {
-      case 'import_events':
-        return await importGoogleCalendarEvents(supabase, googleAccessToken, userId, calendarId);
-      case 'export_events':
-        return await exportEventsToGoogleCalendar(supabase, googleAccessToken, userId, calendarId);
-      case 'sync_bidirectional':
-        return await syncBidirectional(supabase, googleAccessToken, userId, calendarId);
-      default:
-        throw new Error('Invalid action');
-    }
-  } catch (error) {
-    console.error('Google Calendar sync error:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      success: false 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-});
-
-async function importGoogleCalendarEvents(supabase: any, accessToken: string, userId: string, calendarId: string) {
-  const now = new Date();
-  const timeMin = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-  const timeMax = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
-
-  const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
-    {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Google Calendar API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const events = data.items || [];
-
-  let importedCount = 0;
-  let errorCount = 0;
-
-  for (const googleEvent of events) {
-    try {
-      // Check if event already exists
-      const { data: existingEvent } = await supabase
-        .from('events')
-        .select('id')
-        .eq('external_id', googleEvent.id)
-        .eq('user_id', userId)
-        .single();
-
-      if (existingEvent) {
-        console.log(`Event ${googleEvent.id} already exists, skipping`);
-        continue;
-      }
-
-      const startDateTime = googleEvent.start?.dateTime || googleEvent.start?.date;
-      const endDateTime = googleEvent.end?.dateTime || googleEvent.end?.date;
-
-      if (!startDateTime || !endDateTime) {
-        console.warn(`Event ${googleEvent.id} missing date/time, skipping`);
-        continue;
-      }
-
-      const eventData = {
-        user_id: userId,
-        external_id: googleEvent.id,
-        external_source: 'google_calendar',
-        title: googleEvent.summary || 'Evento sem título',
-        description: googleEvent.description || null,
-        location: googleEvent.location || null,
-        start_date: new Date(startDateTime).toISOString(),
-        end_date: new Date(endDateTime).toISOString(),
-        event_type: determineEventType(googleEvent.summary || ''),
-        status: googleEvent.status === 'confirmed' ? 'confirmed' : 'tentative'
-      };
-
-      const { error } = await supabase
-        .from('events')
-        .insert([eventData]);
-
-      if (error) {
-        console.error(`Error inserting event ${googleEvent.id}:`, error);
-        errorCount++;
-      } else {
-        importedCount++;
-      }
-    } catch (error) {
-      console.error(`Error processing event ${googleEvent.id}:`, error);
-      errorCount++;
-    }
-  }
-
-  return new Response(JSON.stringify({
-    success: true,
-    imported: importedCount,
-    errors: errorCount,
-    totalProcessed: events.length
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 }
 
-async function exportEventsToGoogleCalendar(supabase: any, accessToken: string, userId: string, calendarId: string) {
-  // Get events from the last month to next 3 months
-  const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0);
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  })
+}
 
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('start_date', startDate.toISOString())
-    .lte('start_date', endDate.toISOString())
-    .is('external_id', null); // Only export events that don't have external_id
+function badRequest(msg: string) {
+  return json({ error: msg, message: msg }, 400)
+}
+
+function serverError(msg: string) {
+  return json({ error: msg, message: msg }, 500)
+}
+
+function getEnvOrNull(name: string) {
+  const v = Deno.env.get(name)
+  return (v && v.trim().length > 0) ? v : null
+}
+
+function getSupabase() {
+  const url = getEnvOrNull('SUPABASE_URL')
+  const key = getEnvOrNull('SUPABASE_SERVICE_ROLE_KEY') // precisa da role para ignorar RLS na function
+  if (!url || !key) throw new Error('SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY ausentes')
+  return createClient(url, key)
+}
+
+function buildRedirectUriFromEnv() {
+  // Você pode deixar fixo via GOOGLE_REDIRECT_URI ou construir a partir do SUPABASE_URL
+  const configured = getEnvOrNull('GOOGLE_REDIRECT_URI')
+  if (configured) return configured
+  const supabaseUrl = getEnvOrNull('SUPABASE_URL')
+  if (!supabaseUrl) throw new Error('SUPABASE_URL ausente')
+  // CALLBACK desta function:
+  // https://<project>.supabase.co/functions/v1/google-calendar-sync/callback
+  return `${supabaseUrl}/functions/v1/google-calendar-sync/callback`
+}
+
+// ---------- Handlers ----------
+
+async function handleConnect(userId: string) {
+  const clientId = getEnvOrNull('GOOGLE_CLIENT_ID')
+  const clientSecret = getEnvOrNull('GOOGLE_CLIENT_SECRET')
+  const redirectUri = buildRedirectUriFromEnv()
+
+  // Validamos tudo e falamos exatamente o que falta
+  const missing: string[] = []
+  if (!clientId) missing.push('GOOGLE_CLIENT_ID')
+  if (!clientSecret) missing.push('GOOGLE_CLIENT_SECRET')
+  if (!redirectUri) missing.push('GOOGLE_REDIRECT_URI (ou SUPABASE_URL)')
+
+  if (missing.length) {
+    return badRequest(`Missing required parameters: ${missing.join(', ')}`)
+  }
+
+  const scope = [
+    'https://www.googleapis.com/auth/calendar.readonly',
+    'https://www.googleapis.com/auth/calendar.events',
+  ].join(' ')
+
+  const params = new URLSearchParams({
+    client_id: clientId!,
+    redirect_uri: redirectUri!,
+    response_type: 'code',
+    access_type: 'offline',
+    prompt: 'consent',
+    include_granted_scopes: 'true',
+    scope,
+    state: userId, // vamos recuperar no callback
+  })
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  return json({ authUrl })
+}
+
+async function handleCallback(req: Request) {
+  const url = new URL(req.url)
+  const code = url.searchParams.get('code')
+  const userId = url.searchParams.get('state') // veio de "state" no connect
+
+  if (!code || !userId) {
+    return badRequest('Missing code or state (userId)')
+  }
+
+  const clientId = getEnvOrNull('GOOGLE_CLIENT_ID')
+  const clientSecret = getEnvOrNull('GOOGLE_CLIENT_SECRET')
+  const redirectUri = buildRedirectUriFromEnv()
+
+  if (!clientId || !clientSecret || !redirectUri) {
+    return badRequest('Missing required parameters for token exchange')
+  }
+
+  // Troca "code" por tokens
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
+  })
+
+  const tokenJson = await tokenRes.json()
+  if (!tokenRes.ok) {
+    console.error('Token exchange error:', tokenJson)
+    return serverError('Failed to exchange authorization code')
+  }
+
+  const accessToken: string = tokenJson.access_token
+  const refreshToken: string | undefined = tokenJson.refresh_token
+  const expiresInSec: number = tokenJson.expires_in ?? 3600
+  const expiresAt = new Date(Date.now() + expiresInSec * 1000).toISOString()
+
+  // Salva/atualiza credenciais
+  const supabase = getSupabase()
+  const { error } = await supabase
+    .from('calendar_credentials')
+    .upsert({
+      user_id: userId,
+      provider_id: 'google',
+      access_token: accessToken,
+      refresh_token: refreshToken ?? null,
+      expires_at: expiresAt,
+      last_sync_at: null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,provider_id' })
 
   if (error) {
-    throw new Error(`Database error: ${error.message}`);
+    console.error('DB upsert error:', error)
+    return serverError('Failed to persist credentials')
   }
 
-  let exportedCount = 0;
-  let errorCount = 0;
+  // Você pode redirecionar de volta para o app
+  const appUrl = getEnvOrNull('APP_PUBLIC_URL') || '/'
+  return new Response(null, {
+    status: 302,
+    headers: { Location: appUrl, ...corsHeaders },
+  })
+}
 
-  for (const event of events || []) {
-    try {
-      const googleEvent = {
-        summary: event.title,
-        description: event.description,
-        location: event.location,
-        start: {
-          dateTime: event.start_date,
-          timeZone: 'America/Sao_Paulo'
-        },
-        end: {
-          dateTime: event.end_date,
-          timeZone: 'America/Sao_Paulo'
-        },
-        status: event.status === 'confirmed' ? 'confirmed' : 'tentative'
-      };
+async function handleDisconnect(userId: string) {
+  const supabase = getSupabase()
+  const { error } = await supabase
+    .from('calendar_credentials')
+    .delete()
+    .eq('user_id', userId)
+    .eq('provider_id', 'google')
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(googleEvent)
-        }
-      );
+  if (error) {
+    console.error('disconnect error:', error)
+    return serverError('Failed to remove credentials')
+  }
+  return json({ ok: true })
+}
 
-      if (!response.ok) {
-        console.error(`Failed to create Google Calendar event: ${response.status}`);
-        errorCount++;
-        continue;
-      }
+async function handleSync(userId: string) {
+  // Verifica se existem credenciais para o usuário
+  const supabase = getSupabase()
+  const { data, error } = await supabase
+    .from('calendar_credentials')
+    .select('access_token, expires_at, refresh_token')
+    .eq('user_id', userId)
+    .eq('provider_id', 'google')
+    .maybeSingle()
 
-      const createdEvent = await response.json();
+  if (error) {
+    console.error('load credentials error:', error)
+    return serverError('Failed to load credentials')
+  }
 
-      // Update local event with external_id
-      await supabase
-        .from('events')
-        .update({ 
-          external_id: createdEvent.id,
-          external_source: 'google_calendar'
-        })
-        .eq('id', event.id);
+  if (!data) {
+    return badRequest('Missing credentials – conecte primeiro')
+  }
 
-      exportedCount++;
-    } catch (error) {
-      console.error(`Error exporting event ${event.id}:`, error);
-      errorCount++;
+  // Aqui você pode chamar a Google Calendar API com data.access_token
+  // Para este passo a passo, só retornamos OK.
+  return json({ synced: [] })
+}
+
+// ---------- Router ----------
+
+Deno.serve(async (req: Request) => {
+  // CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  const url = new URL(req.url)
+  try {
+    // Callback da autorização do Google
+    if (url.pathname.endsWith('/callback')) {
+      return await handleCallback(req)
     }
+
+    // JSON POST com action e userId
+    if (req.method !== 'POST') {
+      return badRequest('Use POST ou /callback')
+    }
+
+    const auth = req.headers.get('authorization') || ''
+    if (!auth.startsWith('Bearer ')) {
+      return badRequest('Missing or invalid Authorization header')
+    }
+
+    const body = await req.json().catch(() => ({}))
+    const action = body?.action as string | undefined
+    const userId = body?.userId as string | undefined
+
+    if (!action) return badRequest('Missing action')
+    if (!userId) return badRequest('Missing userId')
+
+    if (action === 'connect') return await handleConnect(userId)
+    if (action === 'disconnect') return await handleDisconnect(userId)
+    if (action === 'sync') return await handleSync(userId)
+
+    return badRequest('Unknown action')
+  } catch (e: any) {
+    console.error('Unhandled error:', e)
+    return serverError(e?.message ?? 'Internal error')
   }
-
-  return new Response(JSON.stringify({
-    success: true,
-    exported: exportedCount,
-    errors: errorCount,
-    totalProcessed: events?.length || 0
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-async function syncBidirectional(supabase: any, accessToken: string, userId: string, calendarId: string) {
-  // First import from Google Calendar
-  const importResult = await importGoogleCalendarEvents(supabase, accessToken, userId, calendarId);
-  const importData = await importResult.json();
-
-  // Then export to Google Calendar
-  const exportResult = await exportEventsToGoogleCalendar(supabase, accessToken, userId, calendarId);
-  const exportData = await exportResult.json();
-
-  return new Response(JSON.stringify({
-    success: true,
-    import: importData,
-    export: exportData,
-    message: `Sincronização concluída: ${importData.imported} importados, ${exportData.exported} exportados`
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-function determineEventType(title: string): string {
-  const titleLower = title.toLowerCase();
-  
-  if (titleLower.includes('plantão') || titleLower.includes('plantao')) {
-    return 'plantao';
-  } else if (titleLower.includes('consulta') || titleLower.includes('atendimento')) {
-    return 'consulta';
-  } else if (titleLower.includes('cirurgia') || titleLower.includes('procedimento')) {
-    return 'procedimento';
-  } else if (titleLower.includes('reunião') || titleLower.includes('reuniao')) {
-    return 'reuniao';
-  } else if (titleLower.includes('aula') || titleLower.includes('curso')) {
-    return 'aula';
-  }
-  
-  return 'outros';
-}
+})
