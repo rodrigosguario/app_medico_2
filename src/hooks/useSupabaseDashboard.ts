@@ -47,14 +47,22 @@ export const useSupabaseDashboard = () => {
       setLoading(true);
       setError(null);
 
-      if (syncStatus.isOnline) {
-        // Load dashboard data from Supabase
-        const user = await supabase.auth.getUser();
-        if (!user.data.user) {
-          throw new Error('Usuário não autenticado');
-        }
+      // Verify user session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Erro de sessão no dashboard:', sessionError);
+        throw new Error('Sessão inválida. Faça login novamente.');
+      }
+      
+      if (!session?.user) {
+        throw new Error('Usuário não autenticado');
+      }
 
-        const userId = user.data.user.id;
+      if (syncStatus.isOnline) {
+        console.log('📊 Carregando dados do dashboard...');
+        
+        const userId = session.user.id;
 
         // Get current month start and end
         const now = new Date();
@@ -74,7 +82,16 @@ export const useSupabaseDashboard = () => {
           .lte('start_date', monthEnd.toISOString())
           .order('start_date', { ascending: true });
 
-        if (eventsError) throw eventsError;
+        if (eventsError) {
+          console.error('❌ Erro ao carregar eventos:', eventsError);
+          
+          // Handle specific errors
+          if (eventsError.code === 'PGRST301' || eventsError.message.includes('JWT')) {
+            throw new Error('Sessão expirada. Faça login novamente.');
+          }
+          
+          throw eventsError;
+        }
 
         // Load financial events for current month
         const { data: financialEvents, error: finError } = await supabase
@@ -84,7 +101,21 @@ export const useSupabaseDashboard = () => {
           .gte('date', monthStart.toISOString().split('T')[0])
           .lte('date', monthEnd.toISOString().split('T')[0]);
 
-        if (finError) throw finError;
+        if (finError) {
+          console.error('❌ Erro ao carregar eventos financeiros:', finError);
+          
+          // Handle specific errors
+          if (finError.code === 'PGRST301' || finError.message.includes('JWT')) {
+            throw new Error('Sessão expirada. Faça login novamente.');
+          }
+          
+          throw finError;
+        }
+
+        console.log('✅ Dados do dashboard carregados:', { 
+          events: events?.length || 0, 
+          financialEvents: financialEvents?.length || 0 
+        });
 
         // Calculate metrics
         const metrics = calculateMetrics(events || [], financialEvents || []);
@@ -98,30 +129,33 @@ export const useSupabaseDashboard = () => {
         };
 
         setDashboardData(data);
-        
-        // Cache for offline use
+        // Cache dashboard data
         offlineStorage.saveData('dashboard', data);
         offlineStorage.markAsSynced('dashboard');
       } else {
+        console.log('📱 Carregando dados do dashboard do cache...');
         // Load from offline storage
         const cachedData = offlineStorage.getData<DashboardData>('dashboard');
         if (cachedData) {
           setDashboardData(cachedData);
         } else {
-          // Fallback to mock data if no cache
+          // If no cached data, provide empty/default data
           setDashboardData(getMockDashboardData());
         }
       }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      setError(error instanceof Error ? error.message : 'Erro ao carregar dados');
+      console.error('💥 Erro ao carregar dashboard:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar dados';
+      setError(errorMessage);
       
-      // Fallback to cached data or mock data
-      const cachedData = offlineStorage.getData<DashboardData>('dashboard');
-      if (cachedData) {
-        setDashboardData(cachedData);
-      } else {
-        setDashboardData(getMockDashboardData());
+      // Fallback to cached data only if it's not an auth error
+      if (!errorMessage.includes('login') && !errorMessage.includes('Sessão')) {
+        const cachedData = offlineStorage.getData<DashboardData>('dashboard');
+        if (cachedData) {
+          setDashboardData(cachedData);
+        } else {
+          setDashboardData(getMockDashboardData());
+        }
       }
     } finally {
       setLoading(false);
@@ -248,7 +282,12 @@ export const useSupabaseDashboard = () => {
 
   // Load data when component mounts or online status changes
   useEffect(() => {
-    loadDashboardData();
+    // Add a small delay to ensure auth is ready
+    const timeoutId = setTimeout(() => {
+      loadDashboardData();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
   }, [syncStatus.isOnline]);
 
   return {

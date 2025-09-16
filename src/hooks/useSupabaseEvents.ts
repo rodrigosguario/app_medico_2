@@ -22,12 +22,20 @@ export const useSupabaseEvents = () => {
       setLoading(true);
       setError(null);
 
+      // Verify user session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Erro de sessão:', sessionError);
+        throw new Error('Sessão inválida. Faça login novamente.');
+      }
+      
+      if (!session?.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
       if (syncStatus.isOnline) {
-        // Try to load from Supabase
-        const user = await supabase.auth.getUser();
-        if (!user.data.user) {
-          throw new Error('Usuário não autenticado');
-        }
+        console.log('🔄 Carregando eventos do Supabase...');
         
         const { data, error: supabaseError } = await supabase
           .from('events')
@@ -36,11 +44,22 @@ export const useSupabaseEvents = () => {
             calendars(name, color),
             hospitals(name, address)
           `)
-          .eq('user_id', user.data.user.id)
+          .eq('user_id', session.user.id)
           .order('start_date', { ascending: true });
 
-        if (supabaseError) throw supabaseError;
+        if (supabaseError) {
+          console.error('❌ Erro ao carregar eventos:', supabaseError);
+          
+          // Handle specific errors
+          if (supabaseError.code === 'PGRST301' || supabaseError.message.includes('JWT')) {
+            throw new Error('Sessão expirada. Faça login novamente.');
+          }
+          
+          throw supabaseError;
+        }
 
+        console.log('✅ Eventos carregados:', data?.length || 0);
+        
         if (data) {
           setEvents(data as Event[]);
           // Cache events for offline access
@@ -48,6 +67,7 @@ export const useSupabaseEvents = () => {
           offlineStorage.markAsSynced('events');
         }
       } else {
+        console.log('📱 Carregando eventos do cache offline...');
         // Load from offline storage
         const cachedEvents = offlineStorage.getData<Event[]>('events');
         if (cachedEvents) {
@@ -55,13 +75,16 @@ export const useSupabaseEvents = () => {
         }
       }
     } catch (error) {
-      console.error('Error loading events:', error);
-      setError(error instanceof Error ? error.message : 'Erro ao carregar eventos');
+      console.error('💥 Erro ao carregar eventos:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar eventos';
+      setError(errorMessage);
       
-      // Fallback to cached data
-      const cachedEvents = offlineStorage.getData<Event[]>('events');
-      if (cachedEvents) {
-        setEvents(cachedEvents);
+      // Fallback to cached data only if it's not an auth error
+      if (!errorMessage.includes('login') && !errorMessage.includes('Sessão')) {
+        const cachedEvents = offlineStorage.getData<Event[]>('events');
+        if (cachedEvents) {
+          setEvents(cachedEvents);
+        }
       }
     } finally {
       setLoading(false);
@@ -70,25 +93,41 @@ export const useSupabaseEvents = () => {
 
   const createEvent = async (eventData: Omit<EventInsert, 'user_id' | 'calendar_id'>) => {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
+      console.log('🆕 Criando evento...', eventData);
+      
+      // Verify user session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Erro de sessão ao criar evento:', sessionError);
+        throw new Error('Sessão inválida. Faça login novamente.');
+      }
+      
+      if (!session?.user) {
         throw new Error('Usuário não autenticado');
       }
 
       // Get user's default calendar
-      let { data: calendar } = await supabase
+      console.log('📅 Buscando calendário padrão...');
+      let { data: calendar, error: calendarError } = await supabase
         .from('calendars')
         .select('id')
-        .eq('user_id', user.data.user.id)
+        .eq('user_id', session.user.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
+
+      if (calendarError) {
+        console.error('❌ Erro ao buscar calendário:', calendarError);
+        throw new Error('Erro ao buscar calendário: ' + calendarError.message);
+      }
 
       // If no active calendar exists, create a default one
       if (!calendar) {
+        console.log('🆕 Criando calendário padrão...');
         const { data: newCalendar, error: createError } = await supabase
           .from('calendars')
           .insert([{
-            user_id: user.data.user.id,
+            user_id: session.user.id,
             name: 'Meu Calendário',
             description: 'Calendário padrão',
             color: '#3B82F6',
@@ -98,6 +137,7 @@ export const useSupabaseEvents = () => {
           .single();
 
         if (createError) {
+          console.error('❌ Erro ao criar calendário padrão:', createError);
           throw new Error('Erro ao criar calendário padrão: ' + createError.message);
         }
         calendar = newCalendar;
@@ -105,9 +145,11 @@ export const useSupabaseEvents = () => {
 
       const fullEventData = {
         ...eventData,
-        user_id: user.data.user.id,
+        user_id: session.user.id,
         calendar_id: calendar.id
       };
+
+      console.log('💾 Salvando evento no Supabase...', fullEventData);
 
       if (syncStatus.isOnline) {
         const { data, error } = await supabase
@@ -120,28 +162,44 @@ export const useSupabaseEvents = () => {
           `)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Erro ao inserir evento:', error);
+          
+          // Handle specific errors
+          if (error.code === 'PGRST301' || error.message.includes('JWT')) {
+            throw new Error('Sessão expirada. Faça login novamente.');
+          }
+          
+          throw error;
+        }
 
         if (data) {
+          console.log('✅ Evento criado com sucesso:', data.id);
           setEvents(prev => [...prev, data]);
           // Update cache
           const updatedEvents = [...events, data];
           offlineStorage.saveData('events', updatedEvents);
           
           // Sincronizar com Zapier
-          syncCreateEvent({
-            id: data.id,
-            title: data.title,
-            start_time: data.start_date,
-            end_time: data.end_date,
-            event_type: data.event_type,
-            location: data.location || '',
-            description: data.description || '',
-            value: data.value || 0,
-            status: data.status || 'CONFIRMADO'
-          });
+          try {
+            await syncCreateEvent({
+              id: data.id,
+              title: data.title,
+              start_time: data.start_date,
+              end_time: data.end_date,
+              event_type: data.event_type,
+              location: data.location || '',
+              description: data.description || '',
+              value: data.value || 0,
+              status: data.status || 'CONFIRMADO'
+            });
+          } catch (zapierError) {
+            console.warn('⚠️ Erro na sincronização Zapier:', zapierError);
+            // Don't fail the creation if Zapier sync fails
+          }
         }
       } else {
+        console.log('📱 Adicionando evento para sincronização offline...');
         // Add to pending actions for later sync
         addOfflineAction('CREATE', 'event', fullEventData);
         
@@ -156,7 +214,7 @@ export const useSupabaseEvents = () => {
         setEvents(prev => [...prev, tempEvent]);
       }
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('💥 Erro ao criar evento:', error);
       throw error;
     }
   };
@@ -284,9 +342,14 @@ export const useSupabaseEvents = () => {
     };
   }, [syncStatus.isOnline]);
 
-  // Load events on mount
+  // Load events on mount and when online status changes
   useEffect(() => {
-    loadEvents();
+    // Add a small delay to ensure auth is ready
+    const timeoutId = setTimeout(() => {
+      loadEvents();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
   }, [syncStatus.isOnline]);
 
   return {
