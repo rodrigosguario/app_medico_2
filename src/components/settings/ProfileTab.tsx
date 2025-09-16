@@ -19,8 +19,8 @@ type ProfileForm = {
   crm: string
   specialty: string
   phone: string
-  tax_type?: string
-  tax_rate?: number | string
+  tax_type?: string | null
+  tax_rate?: number | string | null
 }
 
 const DEFAULT_FORM: ProfileForm = {
@@ -38,11 +38,11 @@ export default function ProfileTab() {
   const [saving, setSaving] = useState(false)
   const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_FORM)
 
-  // Carrega perfil existente (se houver)
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: auth } = await supabase.auth.getUser()
+        const user = auth?.user
         if (!user) {
           setLoading(false)
           return
@@ -64,10 +64,12 @@ export default function ProfileTab() {
             specialty: data.specialty ?? '',
             phone: data.phone ?? '',
             tax_type: data.tax_type ?? 'simples_11',
-            tax_rate: typeof data.tax_rate === 'number' ? data.tax_rate : Number(data.tax_rate ?? 0),
+            tax_rate:
+              typeof data.tax_rate === 'number'
+                ? data.tax_rate
+                : Number(data.tax_rate ?? 0),
           })
         } else {
-          // Sem perfil: pré-preenche e-mail do auth
           setProfileForm((prev) => ({ ...prev, email: user.email ?? '' }))
         }
       } catch (err) {
@@ -88,34 +90,32 @@ export default function ProfileTab() {
   const handleSave = async () => {
     try {
       setSaving(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: auth } = await supabase.auth.getUser()
+      const user = auth?.user
       if (!user) throw new Error('Usuário não autenticado')
 
-      // Monta payload; garante user_id e normaliza tipos
-      const payload: any = {
+      const payload: Record<string, any> = {
         user_id: user.id,
-        name: (profileForm.name ?? '').trim(),
-        email: (profileForm.email ?? user.email ?? '').trim(),
-        crm: (profileForm.crm ?? '').trim(),
-        specialty: (profileForm.specialty ?? '').trim(),
-        phone: (profileForm.phone ?? '').trim(),
+        name: String(profileForm.name ?? '').trim(),
+        email: String(profileForm.email ?? user.email ?? '').trim(),
+        crm: String(profileForm.crm ?? '').trim(),
+        specialty: String(profileForm.specialty ?? '').trim(),
+        phone: String(profileForm.phone ?? '').trim(),
         tax_type: profileForm.tax_type ?? null,
         tax_rate: Number(profileForm.tax_rate) || 0,
         updated_at: new Date().toISOString(),
       }
 
-      // Evita conflito com PK ao fazer upsert por user_id
-      if ('id' in payload) delete payload.id
+      delete (payload as any).id
 
       const { data, error } = await supabase
         .from('profiles')
-        .upsert(payload, { onConflict: 'user_id' }) // 👈 cria ou atualiza pelo user_id
+        .upsert(payload, { onConflict: 'user_id' })
         .select()
         .single()
 
       if (error) throw error
 
-      // Atualiza formulário com o que foi persistido
       setProfileForm((prev) => ({
         ...prev,
         ...data,
@@ -148,7 +148,6 @@ export default function ProfileTab() {
 
   return (
     <div className="space-y-8">
-      {/* Informações Pessoais */}
       <section>
         <h2 className="text-xl font-semibold mb-4">Informações Pessoais</h2>
 
@@ -159,7 +158,9 @@ export default function ProfileTab() {
               id="name"
               placeholder="Seu nome completo"
               value={profileForm.name}
-              onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) =>
+                setProfileForm((prev) => ({ ...prev, name: e.target.value }))
+              }
             />
           </div>
 
@@ -170,7 +171,9 @@ export default function ProfileTab() {
               type="email"
               placeholder="seu@email.com"
               value={profileForm.email}
-              onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+              onChange={(e) =>
+                setProfileForm((prev) => ({ ...prev, email: e.target.value }))
+              }
             />
           </div>
 
@@ -180,7 +183,9 @@ export default function ProfileTab() {
               id="crm"
               placeholder="12345/SP"
               value={profileForm.crm}
-              onChange={(e) => setProfileForm((prev) => ({ ...prev, crm: e.target.value }))}
+              onChange={(e) =>
+                setProfileForm((prev) => ({ ...prev, crm: e.target.value }))
+              }
             />
           </div>
 
@@ -190,7 +195,12 @@ export default function ProfileTab() {
               id="specialty"
               placeholder="Cardiologia"
               value={profileForm.specialty}
-              onChange={(e) => setProfileForm((prev) => ({ ...prev, specialty: e.target.value }))}
+              onChange={(e) =>
+                setProfileForm((prev) => ({
+                  ...prev,
+                  specialty: e.target.value,
+                }))
+              }
             />
           </div>
 
@@ -200,13 +210,14 @@ export default function ProfileTab() {
               id="phone"
               placeholder="(11) 99999-9999"
               value={profileForm.phone}
-              onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+              onChange={(e) =>
+                setProfileForm((prev) => ({ ...prev, phone: e.target.value }))
+              }
             />
           </div>
         </div>
       </section>
 
-      {/* Configurações Fiscais */}
       <section>
         <h2 className="text-xl font-semibold mb-4">Configurações Fiscais</h2>
 
@@ -214,7 +225,7 @@ export default function ProfileTab() {
           <div className="space-y-2">
             <Label>Tipo de Tributação</Label>
             <Select
-              value={profileForm.tax_type}
+              value={profileForm.tax_type ?? undefined}
               onValueChange={(value) =>
                 setProfileForm((prev) => ({ ...prev, tax_type: value }))
               }
