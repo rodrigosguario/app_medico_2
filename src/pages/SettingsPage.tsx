@@ -75,9 +75,18 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleProfileSave = async () => {
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Usuário não autenticado. Faça login novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      if (!user) throw new Error('Usuário não autenticado');
+      console.log('💾 Salvando perfil...', profileForm);
 
       const { error } = await supabase
         .from('profiles')
@@ -92,16 +101,33 @@ const SettingsPage: React.FC = () => {
           tax_type: profileForm.tax_type,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao salvar perfil:', error);
+        throw error;
+      }
 
+      console.log('✅ Perfil salvo com sucesso');
       toast({
         title: 'Perfil atualizado',
         description: 'Suas informações foram salvas com sucesso.',
       });
     } catch (error) {
+      console.error('💥 Erro inesperado ao salvar:', error);
+      
+      let errorMessage = 'Erro desconhecido';
+      if (error instanceof Error) {
+        if (error.message.includes('JWT')) {
+          errorMessage = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'Sem permissão para salvar dados.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro ao salvar',
-        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

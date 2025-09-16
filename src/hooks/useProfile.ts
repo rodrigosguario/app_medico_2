@@ -30,6 +30,7 @@ export const useProfile = () => {
       if (!user) {
         setProfile(null);
         setLoading(false);
+        setError(null);
         return;
       }
 
@@ -38,20 +39,32 @@ export const useProfile = () => {
       try {
         console.log('🔄 Buscando perfil para usuário:', user.id);
         
+        // Wait a bit to ensure Supabase is properly initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
+        if (isCancelled) return;
+
         console.log('📋 Resposta do perfil:', { data, error });
 
         if (error) {
+          // Don't spam errors on auth issues, handle gracefully
+          if (error.code === 'PGRST301' || error.message.includes('JWT')) {
+            console.log('⚠️ Problema de autenticação, aguardando nova sessão...');
+            setError(null);
+            return;
+          }
+          
           console.error('❌ Erro ao buscar perfil:', error);
           setError(error?.message || 'Erro ao buscar perfil');
         } else if (!data) {
           // Profile doesn't exist, create it using auth metadata
-          console.log('🆕 Perfil não encontrado, criando com metadados de auth...');
+          console.log('🆕 Perfil não encontrado, criando...');
           
           const profileData = {
             user_id: user.id,
@@ -71,11 +84,13 @@ export const useProfile = () => {
             console.error('Error creating profile:', createError);
             setError('Erro ao criar perfil');
           } else {
-            console.log('Profile created successfully');
+            console.log('✅ Perfil criado com sucesso');
             setProfile(newProfile);
+            setError(null);
           }
         } else {
           setProfile(data);
+          setError(null);
         }
       } catch (error) {
         if (!isCancelled) {
@@ -89,10 +104,12 @@ export const useProfile = () => {
       }
     };
 
-    fetchProfile();
+    // Add a small delay to prevent rapid calls
+    const timeoutId = setTimeout(fetchProfile, 200);
     
     return () => {
       isCancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [user]);
 

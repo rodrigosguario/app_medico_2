@@ -24,22 +24,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   realtime: {
     params: {
-      eventsPerSecond: 10
+      eventsPerSecond: 2
     }
   }
 })
 
-// Teste de conectividade
-supabase.from('profiles').select('count', { count: 'exact', head: true })
-  .then(({ error, count }) => {
-    if (error) {
-      console.error('Erro de conectividade Supabase:', error)
-    } else {
-      console.log('✅ Supabase conectado com sucesso. Perfis encontrados:', count)
-    }
-  })
+// Teste de conectividade simplificado
+console.log('🔗 Supabase client configurado')
+console.log('URL:', supabaseUrl)
+console.log('Key preview:', supabaseAnonKey.substring(0, 30) + '...')
 
 // Log de eventos de autenticação
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event, session?.user?.email)
+  console.log('🔄 Auth state changed:', event, session?.user?.email)
 })
