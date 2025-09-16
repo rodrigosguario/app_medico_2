@@ -1,82 +1,80 @@
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  User, 
-  Bell, 
-  Building2, 
-  Calendar, 
+// src/pages/Settings.tsx  (ou src/pages/SettingsPage.tsx)
+import React from 'react'
+import {
+  Settings as SettingsIcon,
+  Calendar,
+  Bell,
+  Building2,
+  User,
   Database,
-  Settings
-} from 'lucide-react';
-import { ProfileTab } from '@/components/settings/ProfileTab';
-import { NotificationsTab } from '@/components/settings/NotificationsTab';
-import { HospitalsTab } from '@/components/settings/HospitalsTab';
-import { CalendarTab } from '@/components/settings/CalendarTab';
-import { DataTab } from '@/components/settings/DataTab';
-import { SystemTab } from '@/components/settings/SystemTab';
+  ShieldCheck,
+} from 'lucide-react'
+
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+
+// IMPORTAÇÕES como DEFAULT (compatível com os arquivos atuais)
+import ProfileTab from '@/components/settings/ProfileTab'
+import NotificationsTab from '@/components/settings/NotificationsTab'
+import HospitalsTab from '@/components/settings/HospitalsTab'
+import CalendarTab from '@/components/settings/CalendarTab'
+import DataTab from '@/components/settings/DataTab'
+import SystemTab from '@/components/settings/SystemTab'
 
 export default function SettingsPage() {
   return (
-    <div className="container mx-auto py-10 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Configurações</h1>
-        <p className="text-muted-foreground">
-          Gerencie suas preferências e informações pessoais
-        </p>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <SettingsIcon className="h-6 w-6" />
+        <h1 className="text-2xl font-semibold">Configurações</h1>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Perfil</span>
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid grid-cols-6">
+          <TabsTrigger value="profile">
+            <User className="mr-2 h-4 w-4" />
+            Perfil
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notificações</span>
+          <TabsTrigger value="hospitals">
+            <Building2 className="mr-2 h-4 w-4" />
+            Hospitais
           </TabsTrigger>
-          <TabsTrigger value="hospitals" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Hospitais</span>
+          <TabsTrigger value="calendar">
+            <Calendar className="mr-2 h-4 w-4" />
+            Calendário
           </TabsTrigger>
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            <span className="hidden sm:inline">Calendário</span>
+          <TabsTrigger value="notifications">
+            <Bell className="mr-2 h-4 w-4" />
+            Notificações
           </TabsTrigger>
-          <TabsTrigger value="data" className="flex items-center gap-2">
-            <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Dados</span>
+          <TabsTrigger value="data">
+            <Database className="mr-2 h-4 w-4" />
+            Dados
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Sistema</span>
+          <TabsTrigger value="system">
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            Sistema
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
           <ProfileTab />
         </TabsContent>
-
-        <TabsContent value="notifications">
-          <NotificationsTab />
-        </TabsContent>
-
         <TabsContent value="hospitals">
           <HospitalsTab />
         </TabsContent>
-
         <TabsContent value="calendar">
           <CalendarTab />
         </TabsContent>
-
+        <TabsContent value="notifications">
+          <NotificationsTab />
+        </TabsContent>
         <TabsContent value="data">
           <DataTab />
         </TabsContent>
-
         <TabsContent value="system">
           <SystemTab />
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }

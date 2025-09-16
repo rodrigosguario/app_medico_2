@@ -33,7 +33,7 @@ const DEFAULT_FORM: ProfileForm = {
   tax_rate: 6,
 }
 
-export default function ProfileTab() {
+function ProfileTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_FORM)
@@ -148,6 +148,7 @@ export default function ProfileTab() {
 
   return (
     <div className="space-y-8">
+      {/* Informações Pessoais */}
       <section>
         <h2 className="text-xl font-semibold mb-4">Informações Pessoais</h2>
 
@@ -218,6 +219,7 @@ export default function ProfileTab() {
         </div>
       </section>
 
+      {/* Configurações Fiscais */}
       <section>
         <h2 className="text-xl font-semibold mb-4">Configurações Fiscais</h2>
 
@@ -272,3 +274,6 @@ export default function ProfileTab() {
     </div>
   )
 }
+
+export default ProfileTab
+export { ProfileTab } // <- permite importar com chaves { ProfileTab }
