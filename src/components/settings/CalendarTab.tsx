@@ -204,25 +204,25 @@ export function CalendarTab() {
             Última sincronização: {fmt(p.lastSync)}
           </div>
           {p.error && <div className="text-sm text-red-600">{p.error}</div>}
-          <div className="flex gap-2">
-            {p.status !== 'connected' ? (
-              <Button onClick={() => connect(p.id)} disabled={p.status === 'syncing'}>
-                <LinkIcon className="h-4 w-4 mr-2" />
-                Conectar
-              </Button>
-            ) : (
-              <>
-                <Button variant="secondary" onClick={() => sync(p.id)} disabled={p.status === 'syncing'}>
-                  <RefreshCcw className="h-4 w-4 mr-2" />
-                  Sincronizar agora
-                </Button>
-                <Button variant="destructive" onClick={() => disconnect(p.id)} disabled={p.status === 'syncing'}>
-                  <Unlink className="h-4 w-4 mr-2" />
-                  Desconectar
-                </Button>
-              </>
-            )}
-          </div>
+           <div className="flex gap-2">
+             {p.status !== 'connected' ? (
+               <Button onClick={() => connect(p.id)} disabled={p.status === 'syncing'}>
+                 <LinkIcon className="h-4 w-4 mr-2" />
+                 Conectar
+               </Button>
+             ) : (
+               <>
+                 <Button variant="secondary" onClick={() => sync(p.id)} disabled={false}>
+                   <RefreshCcw className="h-4 w-4 mr-2" />
+                   Sincronizar agora
+                 </Button>
+                 <Button variant="destructive" onClick={() => disconnect(p.id)} disabled={false}>
+                   <Unlink className="h-4 w-4 mr-2" />
+                   Desconectar
+                 </Button>
+               </>
+             )}
+           </div>
         </CardContent>
       </Card>
     )
