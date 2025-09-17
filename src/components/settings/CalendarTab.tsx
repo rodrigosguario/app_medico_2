@@ -124,15 +124,28 @@ export function CalendarTab() {
   async function connect(provider: ProviderId) {
     try {
       setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'syncing', error: null } }))
-      const fn =
-        provider === 'google' ? 'google-calendar-sync'
-        : provider === 'outlook' ? 'outlook-calendar-sync'
-        : 'icloud-calendar-sync'
-
-      const result = await callFunction(fn, { action: 'connect' })
-
-      if (result?.authUrl) {
-        window.location.href = result.authUrl as string
+      
+      if (provider === 'google') {
+        const result = await callFunction('google-calendar-sync', { action: 'connect' })
+        if (result?.authUrl) {
+          window.location.href = result.authUrl as string
+          return
+        }
+      } else if (provider === 'outlook') {
+        toast({ 
+          title: 'Microsoft Outlook', 
+          description: 'Funcionalidade em desenvolvimento. Configure suas credenciais nas configurações avançadas.',
+          variant: 'destructive'
+        })
+        setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'disconnected', error: null } }))
+        return
+      } else if (provider === 'icloud') {
+        toast({ 
+          title: 'Apple iCloud', 
+          description: 'Funcionalidade em desenvolvimento. Configure suas credenciais nas configurações avançadas.',
+          variant: 'destructive'
+        })
+        setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'disconnected', error: null } }))
         return
       }
 
@@ -165,13 +178,21 @@ export function CalendarTab() {
   async function sync(provider: ProviderId) {
     try {
       setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'syncing', error: null } }))
-      const fn =
-        provider === 'google' ? 'google-calendar-sync'
-        : provider === 'outlook' ? 'outlook-calendar-sync'
-        : 'icloud-calendar-sync'
-      const result = await callFunction(fn, { action: 'sync' })
-      const info = Array.isArray(result?.synced) ? `${result.synced.length} eventos` : 'Sincronização disparada'
-      toast({ title: `${PROVIDERS[provider].name}`, description: info })
+      
+      if (provider === 'google') {
+        const result = await callFunction('google-calendar-sync', { action: 'sync' })
+        const info = Array.isArray(result?.synced) ? `${result.synced.length} eventos` : 'Sincronização disparada'
+        toast({ title: `${PROVIDERS[provider].name}`, description: info })
+      } else {
+        toast({ 
+          title: 'Sincronização', 
+          description: `${PROVIDERS[provider].name} - Funcionalidade em desenvolvimento`,
+          variant: 'destructive'
+        })
+        setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'connected', error: null } }))
+        return
+      }
+      
       setProviders((prev) => ({
         ...prev,
         [provider]: { ...prev[provider], status: 'connected', lastSync: new Date().toISOString(), error: null },

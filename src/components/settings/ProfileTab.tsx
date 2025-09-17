@@ -29,7 +29,7 @@ const DEFAULT_FORM: ProfileForm = {
   crm: '',
   specialty: '',
   phone: '',
-  tax_type: 'simples_11',
+  tax_type: 'simples_nacional',
   tax_rate: 6,
 }
 
@@ -63,7 +63,7 @@ function ProfileTab() {
             crm: data.crm ?? '',
             specialty: data.specialty ?? '',
             phone: data.phone ?? '',
-            tax_type: data.tax_type ?? 'simples_11',
+            tax_type: data.tax_type ?? 'simples_nacional',
             tax_rate:
               typeof data.tax_rate === 'number'
                 ? data.tax_rate
@@ -236,10 +236,10 @@ function ProfileTab() {
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="simples_11">Simples Nacional (11%)</SelectItem>
-                <SelectItem value="simples_6">Simples Nacional (6%)</SelectItem>
-                <SelectItem value="pf_autonomo">Pessoa Física (autônomo)</SelectItem>
-                <SelectItem value="outro">Outro</SelectItem>
+                <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
+                <SelectItem value="sociedade_simples_limitada">Sociedade Simples Limitada</SelectItem>
+                <SelectItem value="mei">MEI</SelectItem>
+                <SelectItem value="other">Outro</SelectItem>
               </SelectContent>
             </Select>
           </div>
