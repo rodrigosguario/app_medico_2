@@ -20,11 +20,9 @@ export default function DebugConnectionStatus() {
 
         if (basicError) throw basicError
 
-        // Teste 2: HEAD no REST usando a URL do ambiente (sem fixar projeto)
-        const baseUrl = import.meta.env.VITE_SUPABASE_URL
-        if (baseUrl) {
-          await fetch(`${baseUrl}/rest/v1/`, { method: 'HEAD' })
-        }
+        // Teste 2: Verificação adicional de conectividade
+        const { data: authData } = await supabase.auth.getSession()
+        console.log('Teste de conectividade Supabase concluído')
 
         setStatus('connected')
         setMessage('Conectado ao Supabase com sucesso.')

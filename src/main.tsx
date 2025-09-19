@@ -7,10 +7,9 @@ import ErrorBoundary from "./ErrorBoundary";
 import "./error-goggles";
 
 // Logs úteis
-console.log("[BOOT] Vite env:", {
-  VITE_SUPABASE_URL: !!import.meta.env?.VITE_SUPABASE_URL ? "definida" : "vazia",
-  VITE_SUPABASE_PUBLISHABLE_KEY: !!import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY ? "definida" : "vazia",
+console.log("[BOOT] Aplicação inicializando:", {
   MODE: import.meta.env?.MODE,
+  timestamp: new Date().toISOString()
 });
 
 // Network error tracking para debug de conectividade

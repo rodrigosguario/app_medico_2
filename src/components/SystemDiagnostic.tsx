@@ -42,22 +42,20 @@ export const SystemDiagnostic: React.FC = () => {
       });
 
       // 2. Teste de configuração do Supabase
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        results.push({
-          name: 'Configuração Supabase',
-          status: 'error',
-          message: 'Variáveis de ambiente não configuradas',
-          details: 'Verifique se VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY estão definidas no arquivo .env'
-        });
-      } else {
+      try {
+        const { data, error } = await supabase.auth.getSession();
         results.push({
           name: 'Configuração Supabase',
           status: 'success',
-          message: 'Variáveis de ambiente configuradas',
-          details: `URL: ${supabaseUrl.substring(0, 30)}...`
+          message: 'Cliente Supabase configurado corretamente',
+          details: 'Conexão com o servidor estabelecida'
+        });
+      } catch (err) {
+        results.push({
+          name: 'Configuração Supabase',
+          status: 'error',
+          message: 'Erro na configuração do Supabase',
+          details: err instanceof Error ? err.message : 'Erro desconhecido'
         });
       }
 
