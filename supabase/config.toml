@@ -2,3 +2,9 @@ project_id = "kmwsoppkrjzjioeadtqb"
 
 [functions.google-calendar-sync]
 verify_jwt = false
+
+[functions.outlook-calendar-sync]
+verify_jwt = false
+
+[functions.icloud-calendar-sync]
+verify_jwt = false

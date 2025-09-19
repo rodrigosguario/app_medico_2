@@ -1,269 +1,300 @@
 // src/components/settings/CalendarTab.tsx
-import React, { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { toast } from '@/hooks/use-toast'
-import { Calendar, RefreshCcw, Link as LinkIcon, Unlink } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Calendar, RefreshCcw, Link as LinkIcon, Unlink, Zap, Shield, Sparkles, Check, X, Clock, ChevronRight } from 'lucide-react'
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync'
+import { useOutlookCalendarSync } from '@/hooks/useOutlookCalendarSync'
+import { useICloudCalendarSync } from '@/hooks/useICloudCalendarSync'
 
-type ProviderId = 'google' | 'outlook' | 'icloud'
-
-type ProviderState = {
-  id: ProviderId
-  name: string
-  status: 'disconnected' | 'connected' | 'syncing' | 'error'
-  lastSync?: string | null
-  error?: string | null
-}
-
-const PROVIDERS: Record<ProviderId, Omit<ProviderState, 'status'>> = {
-  google: { id: 'google', name: 'Google Calendar' },
-  outlook: { id: 'outlook', name: 'Microsoft Outlook' },
-  icloud: { id: 'icloud', name: 'Apple iCloud' },
-}
-
-function fmt(ts?: string | null) {
-  if (!ts) return '—'
-  try { return new Date(ts).toLocaleString() } catch { return ts }
-}
-
-async function getSessionAndUser() {
-  const [{ data: sessionData, error: sErr }, { data: userData, error: uErr }] = await Promise.all([
-    supabase.auth.getSession(),
-    supabase.auth.getUser()
-  ])
-  if (sErr) throw sErr
-  if (uErr) throw uErr
-  const accessToken = sessionData?.session?.access_token
-  const userId = userData?.user?.id
-  if (!accessToken) throw new Error('Usuário não autenticado (sem token)')
-  if (!userId) throw new Error('Usuário não autenticado (sem userId)')
-  return { accessToken, userId }
-}
-
-function fnUrl(fn: string) {
-  return `https://kmwsoppkrjzjioeadtqb.supabase.co/functions/v1/${fn}`
+function formatTime(ts?: string | null) {
+  if (!ts) return 'Nunca'
+  try { 
+    const date = new Date(ts)
+    return date.toLocaleString('pt-BR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  } catch { 
+    return 'Inválido' 
+  }
 }
 
 export function CalendarTab() {
-  const [loading, setLoading] = useState(true)
-  const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>({
-    google: { ...PROVIDERS.google, status: 'disconnected' },
-    outlook: { ...PROVIDERS.outlook, status: 'disconnected' },
-    icloud: { ...PROVIDERS.icloud, status: 'disconnected' },
-  })
+  const googleSync = useGoogleCalendarSync()
+  const outlookSync = useOutlookCalendarSync()
+  const icloudSync = useICloudCalendarSync()
+  
+  const [icloudCredentials, setIcloudCredentials] = useState({ email: '', password: '' })
+  const [showIcloudDialog, setShowIcloudDialog] = useState(false)
 
-  const load = useCallback(async () => {
-    try {
-      setLoading(true)
-      const { error, data } = await supabase
-        .from('calendar_credentials')
-        .select('provider_id, last_sync_at')
-
-      if (error && error.code !== 'PGRST116') throw error
-
-      const next = { ...providers }
-      ;(Object.keys(next) as ProviderId[]).forEach((p) => {
-        next[p] = { ...next[p], status: 'disconnected', lastSync: null, error: null }
-      })
-
-      ;(data || []).forEach((row: any) => {
-        const pid = row.provider_id as ProviderId
-        if (next[pid]) {
-          next[pid] = {
-            ...next[pid],
-            status: 'connected',
-            lastSync: row.last_sync_at ?? null,
-            error: null,
-          }
-        }
-      })
-
-      setProviders(next)
-    } catch (e: any) {
-      console.error('Erro ao carregar provedores:', e)
-      toast({
-        title: 'Erro ao carregar',
-        description: e?.message ?? 'Falha ao carregar status',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  async function callFunction(fnName: string, body: any) {
-    const { accessToken, userId } = await getSessionAndUser()
-    const res = await fetch(fnUrl(fnName), {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId, ...body }),
-    })
-    const text = await res.text()
-    let json: any = null
-    try { json = text ? JSON.parse(text) : null } catch { /* raw text */ }
-    if (!res.ok) {
-      const msg = json?.message || json?.error || text || 'Erro na função'
-      throw new Error(msg)
-    }
-    return json
+  const handleIcloudConnect = async () => {
+    if (!icloudCredentials.email || !icloudCredentials.password) return
+    
+    await icloudSync.connect(icloudCredentials.email, icloudCredentials.password)
+    setShowIcloudDialog(false)
+    setIcloudCredentials({ email: '', password: '' })
   }
 
-  async function connect(provider: ProviderId) {
-    try {
-      setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'syncing', error: null } }))
+  const ProviderCard = ({ 
+    title, 
+    subtitle, 
+    icon: Icon, 
+    isConnected, 
+    isLoading, 
+    lastSync, 
+    onConnect, 
+    onDisconnect, 
+    onSync,
+    connectComponent 
+  }: {
+    title: string
+    subtitle: string
+    icon: any
+    isConnected: boolean
+    isLoading: boolean
+    lastSync?: string | null
+    onConnect: () => void
+    onDisconnect: () => void
+    onSync: () => void
+    connectComponent?: React.ReactNode
+  }) => (
+    <Card className="group relative overflow-hidden border-none bg-gradient-to-br from-background via-background/50 to-muted/30 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-secondary/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       
-      if (provider === 'google') {
-        const result = await callFunction('google-calendar-sync', { action: 'connect' })
-        if (result?.authUrl) {
-          window.location.href = result.authUrl as string
-          return
-        }
-      } else if (provider === 'outlook') {
-        toast({ 
-          title: 'Microsoft Outlook', 
-          description: 'Funcionalidade em desenvolvimento. Configure suas credenciais nas configurações avançadas.',
-          variant: 'destructive'
-        })
-        setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'disconnected', error: null } }))
-        return
-      } else if (provider === 'icloud') {
-        toast({ 
-          title: 'Apple iCloud', 
-          description: 'Funcionalidade em desenvolvimento. Configure suas credenciais nas configurações avançadas.',
-          variant: 'destructive'
-        })
-        setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'disconnected', error: null } }))
-        return
-      }
-
-      toast({ title: `${PROVIDERS[provider].name}`, description: 'Conectado com sucesso.' })
-      await load()
-    } catch (e: any) {
-      console.error('connect error:', e)
-      setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'error', error: e?.message ?? 'Erro' } }))
-      toast({ title: 'Falha ao conectar', description: e?.message ?? 'Verifique as credenciais', variant: 'destructive' })
-    }
-  }
-
-  async function disconnect(provider: ProviderId) {
-    try {
-      setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'syncing', error: null } }))
-      const fn =
-        provider === 'google' ? 'google-calendar-sync'
-        : provider === 'outlook' ? 'outlook-calendar-sync'
-        : 'icloud-calendar-sync'
-      await callFunction(fn, { action: 'disconnect' })
-      toast({ title: `${PROVIDERS[provider].name}`, description: 'Conta desconectada.' })
-      await load()
-    } catch (e: any) {
-      console.error('disconnect error:', e)
-      setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'error', error: e?.message ?? 'Erro' } }))
-      toast({ title: 'Falha ao desconectar', description: e?.message ?? 'Tente novamente', variant: 'destructive' })
-    }
-  }
-
-  async function sync(provider: ProviderId) {
-    try {
-      setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'syncing', error: null } }))
-      
-      if (provider === 'google') {
-        const result = await callFunction('google-calendar-sync', { action: 'sync' })
-        const info = Array.isArray(result?.synced) ? `${result.synced.length} eventos` : 'Sincronização disparada'
-        toast({ title: `${PROVIDERS[provider].name}`, description: info })
-      } else {
-        toast({ 
-          title: 'Sincronização', 
-          description: `${PROVIDERS[provider].name} - Funcionalidade em desenvolvimento`,
-          variant: 'destructive'
-        })
-        setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'connected', error: null } }))
-        return
-      }
-      
-      setProviders((prev) => ({
-        ...prev,
-        [provider]: { ...prev[provider], status: 'connected', lastSync: new Date().toISOString(), error: null },
-      }))
-    } catch (e: any) {
-      console.error('sync error:', e)
-      setProviders((prev) => ({ ...prev, [provider]: { ...prev[provider], status: 'error', error: e?.message ?? 'Erro' } }))
-      toast({ title: 'Falha na sincronização', description: e?.message ?? 'Tente novamente', variant: 'destructive' })
-    }
-  }
-
-  function ProviderCard({ p }: { p: ProviderState }) {
-    const color =
-      p.status === 'connected' ? 'bg-green-100 text-green-700'
-      : p.status === 'syncing' ? 'bg-blue-100 text-blue-700'
-      : p.status === 'error' ? 'bg-red-100 text-red-700'
-      : 'bg-gray-100 text-gray-700'
-
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            {PROVIDERS[p.id].name}
-          </CardTitle>
-          <Badge className={color}>{p.status}</Badge>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-sm text-muted-foreground">
-            Última sincronização: {fmt(p.lastSync)}
+      <CardHeader className="relative pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-xl ${isConnected ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-muted-foreground'} transition-all duration-300 group-hover:scale-110`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+            </div>
           </div>
-          {p.error && <div className="text-sm text-red-600">{p.error}</div>}
-           <div className="flex gap-2">
-             {p.status !== 'connected' ? (
-               <Button onClick={() => connect(p.id)} disabled={p.status === 'syncing'}>
-                 <LinkIcon className="h-4 w-4 mr-2" />
-                 Conectar
-               </Button>
-             ) : (
-               <>
-                 <Button variant="secondary" onClick={() => sync(p.id)} disabled={false}>
-                   <RefreshCcw className="h-4 w-4 mr-2" />
-                   Sincronizar agora
-                 </Button>
-                 <Button variant="destructive" onClick={() => disconnect(p.id)} disabled={false}>
-                   <Unlink className="h-4 w-4 mr-2" />
-                   Desconectar
-                 </Button>
-               </>
-             )}
-           </div>
-        </CardContent>
-      </Card>
-    )
-  }
+          
+          <div className="flex items-center gap-2">
+            {isConnected ? (
+              <Badge className="bg-primary/10 text-primary border-primary/20 gap-2">
+                <Check className="h-3 w-3" />
+                Conectado
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="gap-2">
+                <X className="h-3 w-3" />
+                Desconectado
+              </Badge>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="relative space-y-4 pt-0">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="h-4 w-4" />
+          <span>Último sync: {formatTime(lastSync)}</span>
+        </div>
+        
+        <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
+        
+        <div className="flex gap-2">
+          {!isConnected ? (
+            connectComponent || (
+              <Button 
+                onClick={onConnect} 
+                disabled={isLoading}
+                className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300 group/btn"
+              >
+                <div className="flex items-center gap-2">
+                  {isLoading ? (
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <LinkIcon className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                  )}
+                  Conectar
+                  <ChevronRight className="h-3 w-3 transition-transform group-hover/btn:translate-x-0.5" />
+                </div>
+              </Button>
+            )
+          ) : (
+            <>
+              <Button 
+                variant="secondary" 
+                onClick={onSync} 
+                disabled={isLoading}
+                className="flex-1 bg-gradient-to-r from-secondary to-secondary/90 transition-all duration-300 hover:shadow-md group/btn"
+              >
+                <RefreshCcw className={`h-4 w-4 mr-2 transition-transform group-hover/btn:rotate-180 ${isLoading ? 'animate-spin' : ''}`} />
+                Sincronizar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={onDisconnect} 
+                disabled={isLoading}
+                size="icon"
+                className="transition-all duration-300 hover:shadow-md group/btn"
+              >
+                <Unlink className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+              </Button>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 
   return (
-    <div className="space-y-6">
-      <div className="text-sm text-muted-foreground">
-        Conecte suas contas de calendário e sincronize seus plantões automaticamente.
-      </div>
-      <Separator />
-      
-      {/* Provedores de calendário */}
-      {loading ? (
-        <div className="text-sm text-muted-foreground">Carregando provedores...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(Object.keys(providers) as ProviderId[]).map((id) => (
-            <ProviderCard key={id} p={providers[id]} />
-          ))}
+    <div className="space-y-8">
+      {/* Header com gradiente futurístico */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 rounded-2xl blur-xl opacity-60" />
+        <div className="relative bg-gradient-to-br from-background via-background/80 to-muted/20 backdrop-blur-sm border border-primary/10 rounded-2xl p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 text-primary">
+              <Zap className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Sincronização Inteligente
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Conecte seus calendários e automatize sua gestão médica com IA
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2 text-primary">
+              <Shield className="h-4 w-4" />
+              Conexão segura
+            </div>
+            <div className="flex items-center gap-2 text-primary">
+              <Sparkles className="h-4 w-4" />
+              Sync automático
+            </div>
+            <div className="flex items-center gap-2 text-primary">
+              <Zap className="h-4 w-4" />
+              Processamento em tempo real
+            </div>
+          </div>
         </div>
-      )}
+      </div>
+
+      <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
+      
+      <div className="grid gap-6">
+        {/* Google Calendar */}
+        <ProviderCard
+          title="Google Calendar"
+          subtitle="Sincronização bidirecional com Google Workspace"
+          icon={Calendar}
+          isConnected={googleSync.isConnected}
+          isLoading={googleSync.isLoading}
+          lastSync={googleSync.lastSync}
+          onConnect={googleSync.connect}
+          onDisconnect={googleSync.disconnect}
+          onSync={googleSync.sync}
+        />
+
+        {/* Microsoft Outlook */}
+        <ProviderCard
+          title="Microsoft Outlook"
+          subtitle="Integração com Microsoft 365 e Exchange"
+          icon={Calendar}
+          isConnected={outlookSync.isConnected}
+          isLoading={outlookSync.isLoading}
+          lastSync={outlookSync.lastSync}
+          onConnect={outlookSync.connect}
+          onDisconnect={outlookSync.disconnect}
+          onSync={outlookSync.sync}
+        />
+
+        {/* Apple iCloud */}
+        <ProviderCard
+          title="Apple iCloud Calendar"
+          subtitle="Conexão via CalDAV com iCloud"
+          icon={Calendar}
+          isConnected={icloudSync.isConnected}
+          isLoading={icloudSync.isLoading}
+          lastSync={icloudSync.lastSync}
+          onConnect={() => setShowIcloudDialog(true)}
+          onDisconnect={icloudSync.disconnect}
+          onSync={icloudSync.sync}
+          connectComponent={
+            <Dialog open={showIcloudDialog} onOpenChange={setShowIcloudDialog}>
+              <DialogTrigger asChild>
+                <Button 
+                  className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300 group/btn"
+                  disabled={icloudSync.isLoading}
+                >
+                  <div className="flex items-center gap-2">
+                    <LinkIcon className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                    Conectar iCloud
+                    <ChevronRight className="h-3 w-3 transition-transform group-hover/btn:translate-x-0.5" />
+                  </div>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Conectar iCloud Calendar
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="icloud-email">Email do iCloud</Label>
+                    <Input
+                      id="icloud-email"
+                      type="email"
+                      placeholder="seu@icloud.com"
+                      value={icloudCredentials.email}
+                      onChange={(e) => setIcloudCredentials(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="icloud-password">Senha de Aplicativo</Label>
+                    <Input
+                      id="icloud-password"
+                      type="password"
+                      placeholder="xxxx-xxxx-xxxx-xxxx"
+                      value={icloudCredentials.password}
+                      onChange={(e) => setIcloudCredentials(prev => ({ ...prev, password: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use uma senha de aplicativo específica gerada nas configurações do iCloud
+                    </p>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowIcloudDialog(false)}
+                      className="flex-1"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleIcloudConnect}
+                      disabled={!icloudCredentials.email || !icloudCredentials.password || icloudSync.isLoading}
+                      className="flex-1"
+                    >
+                      {icloudSync.isLoading ? 'Conectando...' : 'Conectar'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          }
+        />
+      </div>
     </div>
   )
 }
