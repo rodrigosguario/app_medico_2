@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DayData {
@@ -31,22 +32,36 @@ const HeatMap: React.FC = () => {
       
       // Get user
       const { data: authData } = await supabase.auth.getUser();
-      if (!authData?.user) return;
+      if (!authData?.user) {
+        setHeatMapData([]);
+        setStats({ activeDays: 0, intenseDays: 0, averageIntensity: 0 });
+        setLoading(false);
+        return;
+      }
 
-      // Get events from the last 4 weeks
+      // Get events from the last 4 weeks - only confirmed events
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(endDate.getDate() - 28); // 4 weeks
 
       const { data: events, error } = await supabase
         .from('events')
-        .select('start_date, end_date, title')
+        .select('start_date, end_date, title, status')
         .eq('user_id', authData.user.id)
+        .eq('status', 'confirmed') // Only confirmed events
         .gte('start_date', startDate.toISOString())
         .lte('start_date', endDate.toISOString())
         .order('start_date', { ascending: false });
 
       if (error) throw error;
+
+      // If no real events exist, show empty state
+      if (!events || events.length === 0) {
+        setHeatMapData([]);
+        setStats({ activeDays: 0, intenseDays: 0, averageIntensity: 0 });
+        setLoading(false);
+        return;
+      }
 
       // Process events into daily data
       const dailyData: { [key: string]: DayData } = {};
@@ -138,7 +153,7 @@ const HeatMap: React.FC = () => {
 
   const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  if (loading || heatMapData.length === 0) {
+  if (loading) {
     return (
       <div className="dashboard-card">
         <div className="flex items-center justify-between mb-6">
@@ -153,6 +168,43 @@ const HeatMap: React.FC = () => {
           <div className="status-dot bg-primary animate-pulse"></div>
         </div>
         <div className="animate-pulse bg-muted/50 h-48 rounded-xl"></div>
+      </div>
+    );
+  }
+
+  // Empty state when no data
+  if (heatMapData.length === 0 && stats.activeDays === 0) {
+    return (
+      <div className="dashboard-card">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-foreground">
+              Mapa de Carga de Trabalho
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Intensidade de trabalho por dia da semana
+            </p>
+          </div>
+          <div className="status-dot bg-muted"></div>
+        </div>
+        
+        <div className="text-center py-12">
+          <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-2xl flex items-center justify-center">
+            <Calendar className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h4 className="text-lg font-semibold text-foreground mb-2">
+            Nenhum evento registrado
+          </h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            Adicione seus primeiros eventos para visualizar sua carga de trabalho
+          </p>
+          <button 
+            onClick={() => window.location.href = '/calendar?action=new'}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+          >
+            Criar Primeiro Evento
+          </button>
+        </div>
       </div>
     );
   }
