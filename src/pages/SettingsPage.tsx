@@ -1,5 +1,6 @@
 // src/pages/Settings.tsx
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Settings as SettingsIcon,
   Calendar,
@@ -8,9 +9,11 @@ import {
   User,
   Database,
   ShieldCheck,
+  ArrowLeft,
 } from 'lucide-react'
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 
 // ✅ Use exports NOMEADOS (entre chaves) — compatível com o seu projeto
 import { ProfileTab } from '@/components/settings/ProfileTab'
@@ -21,11 +24,23 @@ import { DataTab } from '@/components/settings/DataTab'
 import { SystemTab } from '@/components/settings/SystemTab'
 
 export default function SettingsPage() {
+  const navigate = useNavigate()
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <SettingsIcon className="h-6 w-6" />
-        <h1 className="text-2xl font-semibold">Configurações</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <SettingsIcon className="h-6 w-6" />
+          <h1 className="text-2xl font-semibold">Configurações</h1>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar ao Dashboard
+        </Button>
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
