@@ -129,22 +129,30 @@ const HeatMap: React.FC = () => {
   };
 
   const getIntensityColor = (intensity: number) => {
-    if (intensity === 0) return 'bg-gray-100';
-    if (intensity < 0.25) return 'bg-medical-light/20';
-    if (intensity < 0.5) return 'bg-medical-light/40';
-    if (intensity < 0.75) return 'bg-medical-light/60';
-    return 'bg-medical-light/80';
+    if (intensity === 0) return 'bg-muted border border-border/20';
+    if (intensity < 0.25) return 'bg-primary/20 border border-primary/30';
+    if (intensity < 0.5) return 'bg-primary/40 border border-primary/50';
+    if (intensity < 0.75) return 'bg-primary/60 border border-primary/70';
+    return 'bg-primary border border-primary/80';
   };
 
   const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   if (loading || heatMapData.length === 0) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Mapa de Carga de Trabalho
-        </h3>
-        <div className="animate-pulse bg-gray-200 h-32 rounded"></div>
+      <div className="dashboard-card">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-foreground">
+              Mapa de Carga de Trabalho
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Intensidade de trabalho por dia da semana
+            </p>
+          </div>
+          <div className="status-dot bg-primary animate-pulse"></div>
+        </div>
+        <div className="animate-pulse bg-muted/50 h-48 rounded-xl"></div>
       </div>
     );
   }
@@ -168,76 +176,104 @@ const HeatMap: React.FC = () => {
   // Cálculo de estatísticas removido - agora usamos stats do state
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        Mapa de Carga de Trabalho
-      </h3>
-      <p className="text-sm text-gray-600 mb-4">
-        Intensidade de trabalho por dia da semana
-      </p>
-
-      {/* Grid do heat map */}
-      <div className="space-y-1">
-        {/* Cabeçalho com dias da semana */}
-        <div className="grid grid-cols-8 gap-1 text-xs text-gray-500 mb-2">
-          <div></div>
-          {dayLabels.map(day => (
-            <div key={day} className="text-center">{day}</div>
-          ))}
+    <div className="dashboard-card">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-foreground">
+            Mapa de Carga de Trabalho
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Intensidade de trabalho por dia da semana
+          </p>
         </div>
+        <div className="status-dot bg-primary"></div>
+      </div>
 
-        {/* Linhas do heat map */}
-        {heatMapData.map((week, weekIndex) => (
-          <div key={weekIndex} className="grid grid-cols-8 gap-1">
-            <div className="text-xs text-gray-500 pr-2 flex items-center">
-              {getWeekLabel(week, weekIndex)}
-            </div>
-            {week.days.map((day, dayIndex) => (
-              <div
-                key={dayIndex}
-                className={`h-4 w-full rounded-sm cursor-pointer hover:opacity-80 transition-opacity ${
-                  day ? getIntensityColor(day.intensity) : 'bg-gray-50'
-                }`}
-                title={
-                  day 
-                    ? `${formatDate(day.date)} (${dayLabels[dayIndex]}): ${day.eventCount} eventos, ${day.hours.toFixed(1)}h, ${Math.round(day.intensity * 100)}% intensidade`
-                    : 'Sem dados'
-                }
-              />
+      {/* Grid moderno do heat map */}
+      <div className="space-y-3">
+        {/* Cabeçalho elegante */}
+        <div className="flex items-center gap-4">
+          <div className="w-16 text-xs font-medium text-muted-foreground">
+            Semana
+          </div>
+          <div className="flex gap-2 flex-1">
+            {dayLabels.map(day => (
+              <div key={day} className="flex-1 text-center">
+                <div className="text-xs font-semibold text-muted-foreground mb-1">
+                  {day}
+                </div>
+              </div>
             ))}
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Legenda */}
-      <div className="flex items-center justify-between mt-4 text-xs text-gray-500">
-        <span>Menos</span>
-        <div className="flex space-x-1">
-          {[0, 0.2, 0.4, 0.6, 0.8].map(intensity => (
-            <div
-              key={intensity}
-              className={`h-3 w-3 rounded-sm ${getIntensityColor(intensity)}`}
-            />
+        {/* Grid das semanas */}
+        <div className="space-y-2">
+          {heatMapData.map((week, weekIndex) => (
+            <div key={weekIndex} className="flex items-center gap-4 group">
+              <div className="w-16 text-xs font-medium text-muted-foreground">
+                {getWeekLabel(week, weekIndex)}
+              </div>
+              <div className="flex gap-2 flex-1">
+                {week.days.map((day, dayIndex) => (
+                  <div key={dayIndex} className="flex-1">
+                    <div
+                      className={`h-8 w-full rounded-lg cursor-pointer 
+                                 hover:scale-110 hover:shadow-sm
+                                 transition-all duration-200 
+                                 ${day ? getIntensityColor(day.intensity) : 'bg-muted/30 border border-border/20'}`}
+                      title={
+                        day 
+                          ? `${formatDate(day.date)} (${dayLabels[dayIndex]}): ${day.eventCount} eventos, ${day.hours.toFixed(1)}h, ${Math.round(day.intensity * 100)}% intensidade`
+                          : 'Sem dados'
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
-        <span>Mais</span>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.activeDays}</div>
-          <div className="text-xs text-gray-500">Dias com atividade</div>
+      {/* Legenda moderna */}
+      <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/50">
+        <span className="text-sm font-medium text-muted-foreground">Menos ativo</span>
+        <div className="flex items-center gap-1">
+          {[0, 0.25, 0.5, 0.75, 1].map((intensity, index) => (
+            <div key={index} className="flex flex-col items-center gap-1">
+              <div
+                className={`h-4 w-4 rounded ${getIntensityColor(intensity)}`}
+              />
+            </div>
+          ))}
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-orange-600">{stats.intenseDays}</div>
-          <div className="text-xs text-gray-500">Dias intensos</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-emerald-600">
-            {Math.round(stats.averageIntensity * 100)}%
+        <span className="text-sm font-medium text-muted-foreground">Mais ativo</span>
+      </div>
+
+      {/* Estatísticas modernas */}
+      <div className="grid grid-cols-3 gap-6 mt-6 pt-6 border-t border-border/50">
+        <div className="text-center group">
+          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
+            <span className="text-2xl font-bold text-primary">{stats.activeDays}</span>
           </div>
-          <div className="text-xs text-gray-500">Intensidade média</div>
+          <div className="text-xs font-medium text-muted-foreground">Dias com atividade</div>
+        </div>
+        
+        <div className="text-center group">
+          <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:bg-accent/20 transition-colors">
+            <span className="text-2xl font-bold text-accent">{stats.intenseDays}</span>
+          </div>
+          <div className="text-xs font-medium text-muted-foreground">Dias intensos</div>
+        </div>
+        
+        <div className="text-center group">
+          <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:bg-secondary/20 transition-colors">
+            <span className="text-2xl font-bold text-secondary">
+              {Math.round(stats.averageIntensity * 100)}%
+            </span>
+          </div>
+          <div className="text-xs font-medium text-muted-foreground">Intensidade média</div>
         </div>
       </div>
     </div>
