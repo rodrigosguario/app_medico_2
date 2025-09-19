@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
@@ -288,146 +287,153 @@ Tente perguntas mais específicas como:
   }
 
   return (
-    <Card className={cn("flex flex-col h-full", className)}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-medical/10 rounded-lg">
-              <Brain className="h-5 w-5 text-medical" />
+    <div className={cn("flex flex-col h-full", className)}>
+      <Card className="flex flex-col h-full border-0 shadow-none">
+        <CardHeader className="pb-3 px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-medical/10 rounded-lg">
+                <Brain className="h-5 w-5 text-medical" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Assistente Virtual</CardTitle>
+                <p className="text-sm text-muted-foreground">IA especializada em gestão médica</p>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg">Assistente Virtual</CardTitle>
-              <p className="text-sm text-muted-foreground">IA especializada em gestão médica</p>
-            </div>
-          </div>
-          {onMinimizeToggle && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => onMinimizeToggle(true)}
-            >
-              <Minimize2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col gap-4 p-0">
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-3 max-w-full",
-                  message.sender === 'user' ? 'justify-end' : 'justify-start'
-                )}
+            {onMinimizeToggle && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => onMinimizeToggle(true)}
               >
-                {message.sender === 'assistant' && (
-                  <div className="flex-shrink-0 w-8 h-8 bg-medical/10 rounded-full flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-medical" />
-                  </div>
-                )}
-                
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="space-y-4 min-h-full">
+              {messages.map((message) => (
                 <div
+                  key={message.id}
                   className={cn(
-                    "rounded-lg px-3 py-2 max-w-[80%] break-words",
-                    message.sender === 'user'
-                      ? 'bg-medical text-white'
-                      : 'bg-muted text-foreground'
+                    "flex gap-3 max-w-full",
+                    message.sender === 'user' ? 'justify-end' : 'justify-start'
                   )}
                 >
-                  <div className="whitespace-pre-wrap text-sm">
-                    {message.content}
-                  </div>
-                  <div className={cn(
-                    "text-xs mt-1 opacity-70",
-                    message.sender === 'user' ? 'text-white' : 'text-muted-foreground'
-                  )}>
-                    {message.timestamp.toLocaleTimeString('pt-BR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </div>
-                </div>
-
-                {message.sender === 'user' && (
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-primary" />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="flex gap-3 justify-start">
-                <div className="flex-shrink-0 w-8 h-8 bg-medical/10 rounded-full flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 text-medical animate-spin" />
-                </div>
-                <div className="bg-muted rounded-lg px-3 py-2">
-                  <div className="text-sm text-muted-foreground">
-                    Processando sua solicitação...
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-
-        {messages.length === 1 && (
-          <div className="px-4">
-            <Separator className="mb-4" />
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">Perguntas sugeridas:</p>
-              <div className="grid gap-2">
-                {suggestedQuestions.map((question, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    className="justify-start h-auto p-3 text-left"
-                    onClick={() => handleSuggestedQuestion(question.text)}
-                  >
-                    <question.icon className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <div className="flex-1">
-                      <div className="text-sm">{question.text}</div>
-                      <Badge variant="secondary" className="text-xs mt-1">
-                        {question.category}
-                      </Badge>
+                  {message.sender === 'assistant' && (
+                    <div className="flex-shrink-0 w-8 h-8 bg-medical/10 rounded-full flex items-center justify-center">
+                      <Bot className="h-4 w-4 text-medical" />
                     </div>
-                  </Button>
-                ))}
-              </div>
+                  )}
+                  
+                  <div
+                    className={cn(
+                      "rounded-lg px-3 py-2 max-w-[80%] break-words",
+                      message.sender === 'user'
+                        ? 'bg-medical text-white'
+                        : 'bg-muted text-foreground'
+                    )}
+                  >
+                    <div className="whitespace-pre-wrap text-sm">
+                      {message.content}
+                    </div>
+                    <div className={cn(
+                      "text-xs mt-1 opacity-70",
+                      message.sender === 'user' ? 'text-white' : 'text-muted-foreground'
+                    )}>
+                      {message.timestamp.toLocaleTimeString('pt-BR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  </div>
+
+                  {message.sender === 'user' && (
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex gap-3 justify-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-medical/10 rounded-full flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 text-medical animate-spin" />
+                  </div>
+                  <div className="bg-muted rounded-lg px-3 py-2">
+                    <div className="text-sm text-muted-foreground">
+                      Processando sua solicitação...
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
           </div>
-        )}
 
-        <div className="p-4 border-t">
-          <div className="flex gap-2">
-            <Input
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Pergunte sobre seus plantões, consultas ou finanças..."
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage(inputMessage)}
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button
-              onClick={() => sendMessage(inputMessage)}
-              disabled={!inputMessage.trim() || isLoading}
-              className="bg-medical hover:bg-medical-dark"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+          {messages.length === 1 && (
+            <div className="px-4 py-2 border-t">
+              <Separator className="mb-4" />
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">Perguntas sugeridas:</p>
+                <div className="grid gap-2">
+                  {suggestedQuestions.map((question, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      className="justify-start h-auto p-3 text-left"
+                      onClick={() => handleSuggestedQuestion(question.text)}
+                    >
+                      <question.icon className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-sm">{question.text}</div>
+                        <Badge variant="secondary" className="text-xs mt-1">
+                          {question.category}
+                        </Badge>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="p-4 border-t bg-background">
+            <div className="flex gap-2">
+              <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Pergunte sobre seus plantões, consultas ou finanças..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage(inputMessage);
+                  }
+                }}
+                disabled={isLoading}
+                className="flex-1"
+              />
+              <Button
+                onClick={() => sendMessage(inputMessage)}
+                disabled={!inputMessage.trim() || isLoading}
+                className="bg-medical hover:bg-medical-dark"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };

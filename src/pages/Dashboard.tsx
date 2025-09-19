@@ -134,16 +134,14 @@ const Dashboard: React.FC = () => {
         {/* AI Assistant Sidebar */}
         {isVisible && (
           <aside className={cn(
-            "fixed right-0 top-0 h-full w-96 bg-background border-l border-border z-40 transition-transform duration-300",
+            "fixed right-0 top-0 h-full w-96 bg-background border-l border-border z-40 transition-transform duration-300 flex flex-col",
             isMinimized ? "translate-x-full" : "translate-x-0"
           )}>
-            <div className="h-full pt-16">
-              <AIAssistant 
-                className="h-full"
-                minimized={isMinimized}
-                onMinimizeToggle={toggleMinimized}
-              />
-            </div>
+            <AIAssistant 
+              className="flex-1"
+              minimized={isMinimized}
+              onMinimizeToggle={toggleMinimized}
+            />
           </aside>
         )}
 
