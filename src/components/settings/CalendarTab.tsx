@@ -66,135 +66,135 @@ export function CalendarTab() {
     onSync: () => void
     connectComponent?: React.ReactNode
   }) => (
-    <Card className="group relative overflow-hidden border-none bg-gradient-to-br from-background via-background/50 to-muted/30 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-secondary/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      <CardHeader className="relative pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-xl ${isConnected ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-muted-foreground'} transition-all duration-300 group-hover:scale-110`}>
-              <Icon className="h-5 w-5" />
-            </div>
-            <div>
-              <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
-            </div>
+    <div className="modern-card p-6 group animate-fade-in">
+      <div className="flex items-start justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-xl transition-all duration-300 ${
+            isConnected 
+              ? 'bg-success/10 text-success' 
+              : 'bg-muted/50 text-muted-foreground'
+          }`}>
+            <Icon className="h-6 w-6" />
           </div>
-          
+          <div>
+            <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+            <p className="text-muted-foreground mt-1">{subtitle}</p>
+          </div>
+        </div>
+        
+        <Badge 
+          variant={isConnected ? "default" : "secondary"}
+          className={`${
+            isConnected 
+              ? 'bg-success/10 text-success border-success/20' 
+              : 'bg-muted/50 text-muted-foreground'
+          } px-3 py-1`}
+        >
           <div className="flex items-center gap-2">
             {isConnected ? (
-              <Badge className="bg-primary/10 text-primary border-primary/20 gap-2">
-                <Check className="h-3 w-3" />
-                Conectado
-              </Badge>
+              <Check className="h-3 w-3" />
             ) : (
-              <Badge variant="secondary" className="gap-2">
-                <X className="h-3 w-3" />
-                Desconectado
-              </Badge>
+              <X className="h-3 w-3" />
             )}
+            {isConnected ? 'Conectado' : 'Desconectado'}
           </div>
-        </div>
-      </CardHeader>
+        </Badge>
+      </div>
       
-      <CardContent className="relative space-y-4 pt-0">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>Último sync: {formatTime(lastSync)}</span>
-        </div>
-        
-        <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
-        
-        <div className="flex gap-2">
-          {!isConnected ? (
-            connectComponent || (
-              <Button 
-                onClick={onConnect} 
-                disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300 group/btn"
-              >
-                <div className="flex items-center gap-2">
-                  {isLoading ? (
-                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <LinkIcon className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
-                  )}
-                  Conectar
-                  <ChevronRight className="h-3 w-3 transition-transform group-hover/btn:translate-x-0.5" />
-                </div>
-              </Button>
-            )
-          ) : (
-            <>
-              <Button 
-                variant="secondary" 
-                onClick={onSync} 
-                disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-secondary to-secondary/90 transition-all duration-300 hover:shadow-md group/btn"
-              >
-                <RefreshCcw className={`h-4 w-4 mr-2 transition-transform group-hover/btn:rotate-180 ${isLoading ? 'animate-spin' : ''}`} />
-                Sincronizar
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={onDisconnect} 
-                disabled={isLoading}
-                size="icon"
-                className="transition-all duration-300 hover:shadow-md group/btn"
-              >
-                <Unlink className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
-              </Button>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+        <Clock className="h-4 w-4" />
+        <span>Último sync: {formatTime(lastSync)}</span>
+      </div>
+      
+      <div className="flex gap-3">
+        {!isConnected ? (
+          connectComponent || (
+            <Button 
+              onClick={onConnect} 
+              disabled={isLoading}
+              className="flex-1 modern-button h-11"
+            >
+              <div className="flex items-center gap-2">
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <LinkIcon className="h-4 w-4" />
+                )}
+                Conectar
+                {!isLoading && <ChevronRight className="h-3 w-3" />}
+              </div>
+            </Button>
+          )
+        ) : (
+          <>
+            <Button 
+              variant="secondary" 
+              onClick={onSync} 
+              disabled={isLoading}
+              className="flex-1 h-11 hover:bg-primary/5 hover:text-primary hover:border-primary/20"
+            >
+              <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Sincronizar
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={onDisconnect} 
+              disabled={isLoading}
+              size="icon"
+              className="h-11 w-11 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20"
+            >
+              <Unlink className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
   )
 
   return (
     <div className="space-y-8">
-      {/* Header com gradiente futurístico */}
+      {/* Header com design clean e profissional */}
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 rounded-2xl blur-xl opacity-60" />
-        <div className="relative bg-gradient-to-br from-background via-background/80 to-muted/20 backdrop-blur-sm border border-primary/10 rounded-2xl p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 text-primary">
-              <Zap className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Sincronização Inteligente
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Conecte seus calendários e automatize sua gestão médica com IA
-              </p>
-            </div>
-          </div>
+        <div className="modern-card p-8 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-subtle opacity-60" />
           
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2 text-primary">
-              <Shield className="h-4 w-4" />
-              Conexão segura
+          <div className="relative flex items-start gap-6">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 text-primary">
+              <Calendar className="h-8 w-8" />
             </div>
-            <div className="flex items-center gap-2 text-primary">
-              <Sparkles className="h-4 w-4" />
-              Sync automático
-            </div>
-            <div className="flex items-center gap-2 text-primary">
-              <Zap className="h-4 w-4" />
-              Processamento em tempo real
+            
+            <div className="flex-1">
+              <h2 className="text-3xl font-bold gradient-text mb-3">
+                Sincronização de Calendários
+              </h2>
+              <p className="text-muted-foreground text-lg leading-relaxed">
+                Conecte seus calendários favoritos e mantenha sua agenda médica sempre organizada e atualizada automaticamente.
+              </p>
+              
+              <div className="flex items-center gap-8 mt-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                  <span className="text-foreground/80">Sincronização automática</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-foreground/80">Conexão segura</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+                  <span className="text-foreground/80">Tempo real</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
       
       <div className="grid gap-6">
         {/* Google Calendar */}
         <ProviderCard
           title="Google Calendar"
-          subtitle="Sincronização bidirecional com Google Workspace"
+          subtitle="Integração completa com Google Workspace"
           icon={Calendar}
           isConnected={googleSync.isConnected}
           isLoading={googleSync.isLoading}
@@ -207,7 +207,7 @@ export function CalendarTab() {
         {/* Microsoft Outlook */}
         <ProviderCard
           title="Microsoft Outlook"
-          subtitle="Integração com Microsoft 365 e Exchange"
+          subtitle="Sincronização com Microsoft 365 e Exchange"
           icon={Calendar}
           isConnected={outlookSync.isConnected}
           isLoading={outlookSync.isLoading}
@@ -220,7 +220,7 @@ export function CalendarTab() {
         {/* Apple iCloud */}
         <ProviderCard
           title="Apple iCloud Calendar"
-          subtitle="Conexão via CalDAV com iCloud"
+          subtitle="Acesso via CalDAV para dispositivos Apple"
           icon={Calendar}
           isConnected={icloudSync.isConnected}
           isLoading={icloudSync.isLoading}
@@ -232,48 +232,52 @@ export function CalendarTab() {
             <Dialog open={showIcloudDialog} onOpenChange={setShowIcloudDialog}>
               <DialogTrigger asChild>
                 <Button 
-                  className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300 group/btn"
+                  className="flex-1 modern-button"
                   disabled={icloudSync.isLoading}
                 >
                   <div className="flex items-center gap-2">
-                    <LinkIcon className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                    <LinkIcon className="h-4 w-4" />
                     Conectar iCloud
-                    <ChevronRight className="h-3 w-3 transition-transform group-hover/btn:translate-x-0.5" />
+                    <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md modern-card">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
+                  <DialogTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                      <Calendar className="h-5 w-5" />
+                    </div>
                     Conectar iCloud Calendar
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="icloud-email">Email do iCloud</Label>
+                <div className="space-y-6 pt-4">
+                  <div className="space-y-3">
+                    <Label htmlFor="icloud-email" className="text-sm font-medium">Email do iCloud</Label>
                     <Input
                       id="icloud-email"
                       type="email"
                       placeholder="seu@icloud.com"
                       value={icloudCredentials.email}
                       onChange={(e) => setIcloudCredentials(prev => ({ ...prev, email: e.target.value }))}
+                      className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="icloud-password">Senha de Aplicativo</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="icloud-password" className="text-sm font-medium">Senha de Aplicativo</Label>
                     <Input
                       id="icloud-password"
                       type="password"
                       placeholder="xxxx-xxxx-xxxx-xxxx"
                       value={icloudCredentials.password}
                       onChange={(e) => setIcloudCredentials(prev => ({ ...prev, password: e.target.value }))}
+                      className="h-11"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Use uma senha de aplicativo específica gerada nas configurações do iCloud
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Gere uma senha específica para aplicativos nas configurações de segurança do seu iCloud
                     </p>
                   </div>
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-3 pt-4">
                     <Button 
                       variant="outline" 
                       onClick={() => setShowIcloudDialog(false)}
@@ -284,7 +288,7 @@ export function CalendarTab() {
                     <Button 
                       onClick={handleIcloudConnect}
                       disabled={!icloudCredentials.email || !icloudCredentials.password || icloudSync.isLoading}
-                      className="flex-1"
+                      className="flex-1 modern-button"
                     >
                       {icloudSync.isLoading ? 'Conectando...' : 'Conectar'}
                     </Button>
