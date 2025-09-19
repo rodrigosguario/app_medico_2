@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import { Calendar, RefreshCcw, Link as LinkIcon, Unlink } from 'lucide-react'
+import { GoogleCalendarSync } from '@/components/GoogleCalendarSync'
 
 type ProviderId = 'google' | 'outlook' | 'icloud'
 
@@ -250,18 +251,25 @@ export function CalendarTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="text-sm text-muted-foreground">
         Conecte suas contas de calendário e sincronize seus plantões automaticamente.
       </div>
       <Separator />
+      
+      {/* Novo componente do Google Calendar */}
+      <GoogleCalendarSync />
+      
+      {/* Outros provedores (Outlook, iCloud) - mantidos para futuro */}
       {loading ? (
-        <div className="text-sm text-muted-foreground">Carregando...</div>
+        <div className="text-sm text-muted-foreground">Carregando outros provedores...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(Object.keys(providers) as ProviderId[]).map((id) => (
-            <ProviderCard key={id} p={providers[id]} />
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(Object.keys(providers) as ProviderId[])
+            .filter(id => id !== 'google') // Excluir Google pois já tem componente próprio
+            .map((id) => (
+              <ProviderCard key={id} p={providers[id]} />
+            ))}
         </div>
       )}
     </div>
