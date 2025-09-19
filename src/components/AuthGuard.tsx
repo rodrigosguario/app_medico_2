@@ -78,32 +78,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔐 Tentando fazer login...', { email });
       
+      // Validação básica
+      if (!email || !password) {
+        return { error: 'Email e senha são obrigatórios' };
+      }
+
       const { error, data } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password
       });
 
       if (error) {
         console.error('❌ Erro de login:', error);
         
-        // Provide more specific error messages
-        let errorMessage = error.message;
-        if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Email ou senha incorretos';
-        } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Email não confirmado. Verifique sua caixa de entrada.';
-        } else if (error.message.includes('Too many requests')) {
-          errorMessage = 'Muitas tentativas. Tente novamente em alguns minutos.';
+        // Mensagens de erro mais específicas e amigáveis
+        let errorMessage = 'Erro ao fazer login';
+        
+        if (error.message.includes('Invalid login credentials') || 
+            error.message.includes('invalid_credentials')) {
+          errorMessage = 'Email ou senha incorretos. Verifique seus dados e tente novamente.';
+        } else if (error.message.includes('Email not confirmed') || 
+                   error.message.includes('email_not_confirmed')) {
+          errorMessage = 'Seu email ainda não foi confirmado. Verifique sua caixa de entrada e clique no link de confirmação.';
+        } else if (error.message.includes('Too many requests') || 
+                   error.message.includes('rate_limit')) {
+          errorMessage = 'Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.';
+        } else if (error.message.includes('Network error') || 
+                   error.message.includes('Failed to fetch')) {
+          errorMessage = 'Problema de conexão. Verifique sua internet e tente novamente.';
+        } else {
+          errorMessage = `Erro no login: ${error.message}`;
         }
         
         return { error: errorMessage };
       }
 
-      console.log('✅ Login realizado com sucesso!', { userId: data.user?.id });
+      if (data.user) {
+        console.log('✅ Login realizado com sucesso!', { 
+          userId: data.user.id, 
+          email: data.user.email 
+        });
+        
+        toast({
+          title: "Login realizado!",
+          description: `Bem-vindo de volta, ${data.user.user_metadata?.name || data.user.email}!`,
+        });
+      }
+
       return {};
     } catch (error) {
       console.error('💥 Erro inesperado no login:', error);
-      return { error: 'Erro inesperado ao fazer login. Tente novamente.' };
+      return { error: 'Erro inesperado ao fazer login. Verifique sua conexão e tente novamente.' };
     }
   };
 
@@ -111,17 +136,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('📝 Tentando criar conta...', { email, name, crm, specialty });
       
+      // Validação básica dos campos obrigatórios
+      if (!email || !password || !name || !crm || !specialty) {
+        return { error: 'Todos os campos são obrigatórios' };
+      }
+
+      if (password.length < 6) {
+        return { error: 'A senha deve ter pelo menos 6 caracteres' };
+      }
+
+      // Validação básica do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return { error: 'Por favor, insira um email válido' };
+      }
+
       const redirectUrl = `${window.location.origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            name,
-            crm,
-            specialty
+            name: name.trim(),
+            crm: crm.trim(),
+            specialty: specialty.trim()
           }
         }
       });
@@ -129,32 +169,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         console.error('❌ Erro no cadastro:', error);
         
-        // Provide more specific error messages
-        let errorMessage = error.message;
-        if (error.message.includes('User already registered')) {
-          errorMessage = 'Este email já está cadastrado. Tente fazer login.';
-        } else if (error.message.includes('Password should be at least')) {
+        // Mensagens de erro mais específicas e amigáveis
+        let errorMessage = 'Erro ao criar conta';
+        
+        if (error.message.includes('User already registered') || 
+            error.message.includes('already_registered')) {
+          errorMessage = 'Este email já está cadastrado. Tente fazer login ou use outro email.';
+        } else if (error.message.includes('Password should be at least') || 
+                   error.message.includes('password_too_short')) {
           errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
-        } else if (error.message.includes('Invalid email')) {
-          errorMessage = 'Email inválido. Verifique o formato.';
+        } else if (error.message.includes('Invalid email') || 
+                   error.message.includes('invalid_email')) {
+          errorMessage = 'Email inválido. Verifique o formato (exemplo: seu@email.com).';
+        } else if (error.message.includes('Signup is disabled') || 
+                   error.message.includes('signup_disabled')) {
+          errorMessage = 'Cadastro temporariamente desabilitado. Tente novamente mais tarde.';
+        } else if (error.message.includes('Network error') || 
+                   error.message.includes('Failed to fetch')) {
+          errorMessage = 'Problema de conexão. Verifique sua internet e tente novamente.';
+        } else {
+          errorMessage = `Erro no cadastro: ${error.message}`;
         }
         
         return { error: errorMessage };
       }
 
-      console.log('✅ Conta criada com sucesso!', { userId: data.user?.id });
-
-      if (data.user && !data.session) {
-        toast({
-          title: "Confirme seu email",
-          description: "Verifique sua caixa de entrada para confirmar o cadastro.",
+      if (data.user) {
+        console.log('✅ Conta criada com sucesso!', { 
+          userId: data.user.id, 
+          email: data.user.email,
+          needsConfirmation: !data.session 
         });
+
+        if (!data.session) {
+          // Usuário precisa confirmar email
+          toast({
+            title: "Conta criada com sucesso!",
+            description: "Verifique sua caixa de entrada e clique no link de confirmação para ativar sua conta.",
+          });
+        } else {
+          // Login automático após cadastro
+          toast({
+            title: "Bem-vindo!",
+            description: `Conta criada com sucesso! Bem-vindo, Dr(a). ${name}!`,
+          });
+        }
       }
 
       return {};
     } catch (error) {
       console.error('💥 Erro inesperado no cadastro:', error);
-      return { error: 'Erro inesperado ao fazer cadastro. Tente novamente.' };
+      return { error: 'Erro inesperado ao criar conta. Verifique sua conexão e tente novamente.' };
     }
   };
 
