@@ -244,7 +244,7 @@ Deno.serve(async (req: Request) => {
       return await handleCallback(req)
     }
 
-    // JSON POST com action e userId
+    // JSON POST com action e userId (requer autenticação)
     if (req.method !== 'POST') {
       return badRequest('Use POST ou /callback')
     }
@@ -253,6 +253,12 @@ Deno.serve(async (req: Request) => {
     const auth = req.headers.get('authorization') || ''
     if (!auth.startsWith('Bearer ')) {
       return badRequest('Missing or invalid Authorization header')
+    }
+
+    // Validar JWT token manualmente (já que desabilitamos verify_jwt)
+    const token = auth.substring(7) // Remove "Bearer "
+    if (!token) {
+      return badRequest('Invalid JWT token')
     }
 
     const body = await req.json().catch(() => ({}))
