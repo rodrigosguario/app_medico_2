@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
@@ -30,11 +31,11 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  useEffect(() => {
+  React.useEffect(() => {
     let mounted = true;
     
     // Set up auth state listener FIRST
@@ -237,10 +238,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  return React.createElement(
+    AuthContext.Provider,
+    { value },
+    children
   );
 };
 
@@ -260,36 +261,38 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   const hasAuthError = searchParams.get('error') || searchParams.get('error_code');
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical"></div>
-          <p className="text-muted-foreground">Verificando autenticação...</p>
-        </div>
-      </div>
+    return React.createElement(
+      'div',
+      { className: 'min-h-screen flex items-center justify-center bg-background' },
+      React.createElement(
+        'div',
+        { className: 'text-center space-y-4' },
+        React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-medical' }),
+        React.createElement('p', { className: 'text-muted-foreground' }, 'Verificando autenticação...')
+      )
     );
   }
 
   if (hasAuthError) {
-    return <AuthErrorHandler />;
+    return React.createElement(AuthErrorHandler);
   }
 
   if (!isAuthenticated) {
-    return fallback || <LoginForm />;
+    return fallback || React.createElement(LoginForm);
   }
 
-  return <>{children}</>;
+  return React.createElement(React.Fragment, null, children);
 };
 
 const LoginForm: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [crm, setCrm] = useState('');
-  const [specialty, setSpecialty] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [name, setName] = React.useState('');
+  const [crm, setCrm] = React.useState('');
+  const [specialty, setSpecialty] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [isSignUp, setIsSignUp] = React.useState(false);
   const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
