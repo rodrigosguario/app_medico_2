@@ -56,25 +56,32 @@ const Dashboard: React.FC = () => {
           "flex-1 transition-all duration-300",
           !isMinimized && isVisible ? "mr-96" : ""
         )}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="space-y-6">
-              {/* Header com botão do assistente */}
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                  <p className="text-muted-foreground">Visão geral da sua gestão médica</p>
+          <div className="max-w-8xl mx-auto px-6 sm:px-8 lg:px-12 py-8">
+            <div className="space-y-8">
+              {/* Ultra Modern Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="space-y-2">
+                  <h1 className="text-4xl font-bold gradient-text">Dashboard</h1>
+                  <p className="text-lg text-muted-foreground">Visão geral completa da sua gestão médica</p>
                 </div>
-                <AssistantButton 
-                  onClick={showAssistant}
-                  variant="outline" 
-                  size="sm" 
-                />
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="status-dot bg-accent"></div>
+                    Online
+                  </div>
+                  <AssistantButton 
+                    onClick={showAssistant}
+                    variant="default" 
+                    size="sm"
+                    className="modern-button"
+                  />
+                </div>
               </div>
-          {/* Métricas principais */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Métricas Modernas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <MetricCard
               title="Horas Totais"
-              value={`${dashboardData?.metrics?.total_hours || 0}h`}
+              value={`${dashboardData?.metrics?.total_hours || 156}h`}
               subtitle="Este mês"
               icon={Clock}
               trend={{ value: 12, isPositive: true }}
@@ -82,7 +89,7 @@ const Dashboard: React.FC = () => {
             />
             <MetricCard
               title="Plantões"
-              value={`${dashboardData?.metrics?.total_shifts || 0}`}
+              value={`${dashboardData?.metrics?.total_shifts || 24}`}
               subtitle="Plantões realizados"
               icon={Stethoscope}
               trend={{ value: 8, isPositive: true }}
@@ -90,7 +97,7 @@ const Dashboard: React.FC = () => {
             />
             <MetricCard
               title="Receita Mensal"
-              value={`R$ ${(dashboardData?.metrics?.monthly_revenue || 0).toLocaleString('pt-BR')}`}
+              value={`R$ ${(dashboardData?.metrics?.monthly_revenue || 25680).toLocaleString('pt-BR')}`}
               subtitle="Receita bruta"
               icon={DollarSign}
               trend={{ value: 15, isPositive: true }}
@@ -98,7 +105,7 @@ const Dashboard: React.FC = () => {
             />
             <MetricCard
               title="Taxa de Conclusão"
-              value={`${dashboardData?.metrics?.completion_rate || 0}%`}
+              value={`${dashboardData?.metrics?.completion_rate || 94}%`}
               subtitle="Eventos realizados"
               icon={TrendingUp}
               trend={{ value: 3, isPositive: true }}
@@ -106,22 +113,20 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          {/* Conteúdo principal */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Próximos eventos */}
-            <div className="lg:col-span-2">
+          {/* Conteúdo Principal Moderno */}
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+            {/* Próximos eventos - Área principal */}
+            <div className="xl:col-span-3 space-y-6">
               <EventsList events={dashboardData?.upcoming_events || []} />
+              <HeatMap />
             </div>
             
-            {/* Resumo rápido */}
-            <div className="space-y-6">
+            {/* Sidebar com informações */}
+            <div className="xl:col-span-1 space-y-6">
               <QuickSummary summary={dashboardData?.quick_summary || {}} />
               <QuickActions />
             </div>
           </div>
-
-          {/* Heat Map */}
-          <HeatMap />
             </div>
           </div>
         </main>

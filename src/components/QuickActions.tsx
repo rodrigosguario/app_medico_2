@@ -9,46 +9,49 @@ const QuickActions: React.FC = () => {
     {
       label: 'Novo Evento',
       icon: Plus,
-      color: 'bg-medical text-white hover:bg-medical-dark',
+      color: 'bg-gradient-to-r from-primary to-primary-dark text-white hover:shadow-primary',
       onClick: () => navigate('/calendar?action=new')
     },
     {
-      label: 'Ver Calendário',
+      label: 'Ver Calendário', 
       icon: Calendar,
-      color: 'bg-white text-medical border border-medical hover:bg-medical-light',
+      color: 'bg-gradient-to-r from-secondary/10 to-secondary/5 text-secondary border border-secondary/20 hover:bg-secondary/10',
       onClick: () => navigate('/calendar')
     },
     {
       label: 'Exportar ICS',
       icon: Download,
-      color: 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50',
+      color: 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 border border-blue-200 hover:bg-blue-100',
       onClick: () => navigate('/import-export')
     },
     {
       label: 'Importar ICS',
       icon: Upload,
-      color: 'bg-white text-green-600 border border-green-200 hover:bg-green-50',
+      color: 'bg-gradient-to-r from-accent/10 to-accent/5 text-accent border border-accent/20 hover:bg-accent/15',
       onClick: () => navigate('/import-export')
     },
     {
       label: 'Relatórios',
       icon: BarChart3,
-      color: 'bg-white text-purple-600 border border-purple-200 hover:bg-purple-50',
+      color: 'bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200 hover:bg-purple-100',
       onClick: () => navigate('/financial')
     },
     {
       label: 'Configurações',
       icon: Settings,
-      color: 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50',
+      color: 'bg-gradient-to-r from-muted to-muted/50 text-muted-foreground border border-border hover:bg-muted',
       onClick: () => navigate('/settings')
     }
   ];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        Ações Rápidas
-      </h3>
+    <div className="dashboard-card">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-foreground">
+          Ações Rápidas
+        </h3>
+        <div className="status-dot bg-primary"></div>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         {actions.map((action, index) => {
@@ -58,31 +61,50 @@ const QuickActions: React.FC = () => {
             <button
               key={index}
               onClick={action.onClick}
-              className={`p-3 rounded-lg transition-colors text-left flex items-center gap-2 text-sm font-medium ${action.color}`}
+              className={`group p-4 rounded-xl transition-all duration-200 text-left 
+                         flex items-center gap-3 font-medium hover:scale-[1.02] active:scale-[0.98] 
+                         ${action.color}`}
             >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">{action.label}</span>
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon className="h-4 w-4 flex-shrink-0" />
+              </div>
+              <span className="text-sm font-semibold">{action.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Seção de templates rápidos */}
-      <div className="mt-6 pt-4 border-t border-gray-100">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">
+      {/* Templates modernos */}
+      <div className="mt-6 pt-6 border-t border-border/50">
+        <h4 className="text-lg font-semibold text-foreground mb-4">
           Templates Rápidos
         </h4>
         
         <div className="space-y-2">
-          <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-            🏥 Plantão UTI - 12h
-          </button>
-          <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-            👩‍⚕️ Consulta Ambulatório - 1h
-          </button>
-          <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-            📚 Aula/Palestra - 2h
-          </button>
+          {[
+            { emoji: '🏥', text: 'Plantão UTI - 12h', time: '12 horas' },
+            { emoji: '👩‍⚕️', text: 'Consulta Ambulatório', time: '1 hora' },
+            { emoji: '📚', text: 'Aula/Palestra', time: '2 horas' }
+          ].map((template, index) => (
+            <button 
+              key={index}
+              className="w-full text-left p-3 rounded-xl hover:bg-muted/50 
+                         border border-border/30 hover:border-primary/20 
+                         transition-all duration-200 group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg group-hover:scale-110 transition-transform">
+                    {template.emoji}
+                  </span>
+                  <span className="font-medium text-foreground">{template.text}</span>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium px-2 py-1 bg-muted rounded-full">
+                  {template.time}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </div>

@@ -51,27 +51,35 @@ const QuickSummary: React.FC<QuickSummaryProps> = ({ summary }) => {
   ];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        Resumo Rápido
-      </h3>
+    <div className="dashboard-card">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-foreground">
+          Resumo Rápido
+        </h3>
+        <div className="status-dot bg-accent"></div>
+      </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {summaryItems.map((item, index) => {
           const Icon = item.icon;
           
           return (
-            <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+            <div 
+              key={index} 
+              className="group flex items-center justify-between p-4 rounded-xl 
+                         border border-border/30 hover:border-primary/20 
+                         hover:bg-muted/30 transition-all duration-200"
+            >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${item.bgColor}`}>
-                  <Icon className={`h-4 w-4 ${item.color}`} />
+                <div className={`p-2.5 rounded-xl ${item.bgColor} group-hover:scale-105 transition-transform`}>
+                  <Icon className={`h-5 w-5 ${item.color}`} />
                 </div>
-                <span className="text-sm font-medium text-gray-700">
+                <span className="font-medium text-foreground">
                   {item.label}
                 </span>
               </div>
               
-              <span className="text-sm font-semibold text-gray-900">
+              <span className="text-lg font-bold text-foreground">
                 {item.value}{item.suffix || ''}
               </span>
             </div>
@@ -79,14 +87,17 @@ const QuickSummary: React.FC<QuickSummaryProps> = ({ summary }) => {
         })}
       </div>
 
-      {/* Alertas ou notificações importantes */}
-      <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <div className="flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-800">Lembrete</p>
-            <p className="text-amber-700 mt-1">
-              Você tem 2 plantões confirmados para esta semana
+      {/* Notificação importante moderna */}
+      <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 
+                      border border-amber-200 rounded-xl">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-amber-800 mb-1">Lembrete</h4>
+            <p className="text-sm text-amber-700">
+              Você tem <strong>2 plantões confirmados</strong> para esta semana
             </p>
           </div>
         </div>

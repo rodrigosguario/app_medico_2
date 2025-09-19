@@ -71,75 +71,83 @@ const EventsList: React.FC<EventsListProps> = ({ events }) => {
 
   if (!events || events.length === 0) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Próximos Eventos
-        </h3>
-        <div className="text-center py-8 text-gray-500">
-          <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-          <p>Nenhum evento agendado</p>
-          <p className="text-sm mt-1">Seus próximos compromissos aparecerão aqui</p>
+      <div className="dashboard-card">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-foreground">
+            Próximos Eventos
+          </h3>
+        </div>
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <Calendar className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h4 className="text-lg font-medium text-foreground mb-2">Nenhum evento agendado</h4>
+          <p className="text-muted-foreground">Seus próximos compromissos aparecerão aqui</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
+    <div className="dashboard-card">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-foreground">
           Próximos Eventos
         </h3>
-        <span className="text-sm text-gray-500">
-          {events.length} evento{events.length !== 1 ? 's' : ''}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {events.length} evento{events.length !== 1 ? 's' : ''}
+          </span>
+          <div className="status-dot bg-primary"></div>
+        </div>
       </div>
 
       <div className="space-y-4">
-        {events.map((event) => (
+        {events.slice(0, 6).map((event, index) => (
           <div
             key={event.id}
-            className="p-4 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+            className="group p-4 rounded-xl border border-border/50 hover:border-primary/20 
+                       hover:shadow-sm transition-all duration-200 hover:bg-muted/20"
+            style={{animationDelay: `${index * 0.1}s`}}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="font-medium text-gray-900">{event.title}</h4>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEventTypeColor(event.event_type)}`}>
-                    {event.event_type}
+                <div className="flex items-center gap-3 mb-3">
+                  <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                    {event.title}
+                  </h4>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEventTypeColor(event.event_type)}`}>
+                    {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1).toLowerCase()}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{formatDateTime(event.start_date)}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Clock className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="font-medium">{formatDateTime(event.start_date)}</span>
                   </div>
                   
                   {event.location && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span className="truncate max-w-xs">{event.location}</span>
-                    </div>
-                  )}
-                  
-                  {event.hospital_name && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span className="truncate max-w-xs">{event.hospital_name}</span>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+                        <MapPin className="h-4 w-4 text-accent" />
+                      </div>
+                      <span className="truncate max-w-xs font-medium">{event.location}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
                     {event.status}
                   </span>
                   
                   {event.value && (
-                    <div className="flex items-center gap-1 text-sm font-medium text-green-600">
-                      <DollarSign className="h-4 w-4" />
-                      <span>{formatCurrency(event.value)}</span>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-success/10 rounded-full">
+                      <DollarSign className="h-4 w-4 text-success" />
+                      <span className="text-sm font-semibold text-success">{formatCurrency(event.value)}</span>
                     </div>
                   )}
                 </div>
@@ -149,10 +157,10 @@ const EventsList: React.FC<EventsListProps> = ({ events }) => {
         ))}
       </div>
 
-      {events.length > 5 && (
-        <div className="mt-4 text-center">
-          <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-            Ver todos os eventos
+      {events.length > 6 && (
+        <div className="mt-6 text-center">
+          <button className="modern-button text-sm px-6 py-2">
+            Ver todos os eventos ({events.length})
           </button>
         </div>
       )}
