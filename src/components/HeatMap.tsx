@@ -101,7 +101,7 @@ const HeatMap: React.FC = () => {
         
         for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
           const date = new Date(today);
-          date.setDate(today.getDate() - (weekOffset * 7) - (6 - dayOfWeek));
+          date.setDate(today.getDate() - (weekOffset * 7) - (today.getDay() - dayOfWeek));
           const dateKey = date.toISOString().split('T')[0];
           
           // Only show days that are not in the future
