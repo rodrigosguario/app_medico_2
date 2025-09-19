@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/hooks/use-toast'
+import { useAuth } from '@/components/AuthGuard'
 
 type ProfileForm = {
   name: string
@@ -34,20 +35,20 @@ const DEFAULT_FORM: ProfileForm = {
 }
 
 function ProfileTab() {
+  const { user, isAuthenticated } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_FORM)
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const { data: auth } = await supabase.auth.getUser()
-        const user = auth?.user
-        if (!user) {
-          setLoading(false)
-          return
-        }
+      if (!user || !isAuthenticated) {
+        console.warn('⚠️ Usuário não autenticado no ProfileTab')
+        setLoading(false)
+        return
+      }
 
+      try {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -85,14 +86,20 @@ function ProfileTab() {
     }
 
     load()
-  }, [])
+  }, [user, isAuthenticated])
 
   const handleSave = async () => {
+    if (!user || !isAuthenticated) {
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Usuário não autenticado. Faça login novamente.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     try {
       setSaving(true)
-      const { data: auth } = await supabase.auth.getUser()
-      const user = auth?.user
-      if (!user) throw new Error('Usuário não autenticado')
 
       const payload: Record<string, any> = {
         user_id: user.id,
