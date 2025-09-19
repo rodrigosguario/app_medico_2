@@ -66,7 +66,7 @@ const QuickActions: React.FC = () => {
                          ${action.color}`}
             >
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Icon className="h-4 w-4 flex-shrink-0" />
+                <Icon className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
               </div>
               <span className="text-sm font-semibold">{action.label}</span>
             </button>
