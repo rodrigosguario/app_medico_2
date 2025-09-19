@@ -101,7 +101,11 @@ useEffect(() => {
     description: '',
     value: '',
     status: 'CONFIRMADO',
-    hospital_id: ''
+    hospital_id: '',
+    is_recurring: false,
+    recurring_type: 'days',
+    recurring_interval: 1,
+    recurring_count: 1
   });
 
   const [customLocation, setCustomLocation] = useState('');
@@ -134,20 +138,24 @@ useEffect(() => {
   };
 
   const resetEventForm = () => {
-  setEventForm({
-    title: '',
-    event_type: 'PLANTAO',
-    start_time: '',
-    end_time: '',
-    location: '',
-    description: '',
-    value: '',
-    status: 'CONFIRMADO',
-    hospital_id: ''
-  });
-  setCustomLocation('');
-  setEditingEvent(null);
-};
+    setEventForm({
+      title: '',
+      event_type: 'PLANTAO',
+      start_time: '',
+      end_time: '',
+      location: '',
+      description: '',
+      value: '',
+      status: 'CONFIRMADO',
+      hospital_id: '',
+      is_recurring: false,
+      recurring_type: 'days',
+      recurring_interval: 1,
+      recurring_count: 1
+    });
+    setCustomLocation('');
+    setEditingEvent(null);
+  };
 
 const handleCreateEvent = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -223,8 +231,8 @@ const handleCreateEvent = async (e: React.FormEvent) => {
       'REALIZADO': 'completed'
     };
 
-    // Preparar dados do evento
-    const eventData = {
+    // Preparar dados do evento base
+    const baseEventData = {
       title: eventForm.title.trim(),
       event_type: eventTypeMapping[eventForm.event_type as keyof typeof eventTypeMapping] || 'plantao',
       start_date: startDate.toISOString(),
@@ -233,11 +241,11 @@ const handleCreateEvent = async (e: React.FormEvent) => {
       description: eventForm.description?.trim() || null,
       value: eventForm.value ? parseFloat(eventForm.value.toString()) : null,
       status: statusMapping[eventForm.status as keyof typeof statusMapping] || 'confirmed',
-      user_id: profile?.user_id || profile?.id // Usar user_id do perfil
+      user_id: profile?.user_id || profile?.id
     };
 
     // Validar se temos o user_id
-    if (!eventData.user_id) {
+    if (!baseEventData.user_id) {
       toast({
         title: "Erro",
         description: "Erro de autenticação. Faça login novamente.",
@@ -246,22 +254,44 @@ const handleCreateEvent = async (e: React.FormEvent) => {
       return;
     }
 
-    console.log('📤 Dados do evento preparados:', eventData);
+    console.log('📤 Dados do evento preparados:', baseEventData);
 
     if (editingEvent) {
       console.log('✏️ Atualizando evento existente:', editingEvent.id);
-      await updateEvent(editingEvent.id, eventData);
+      await updateEvent(editingEvent.id, baseEventData);
       toast({
         title: "Sucesso",
         description: "Evento atualizado com sucesso!"
       });
     } else {
-      console.log('➕ Criando novo evento...');
-      await createEvent(eventData);
-      toast({
-        title: "Sucesso", 
-        description: `Evento criado! "${eventForm.title}" foi adicionado ao seu calendário.`
-      });
+      if (eventForm.is_recurring && eventForm.recurring_count > 1) {
+        // Criar eventos recorrentes
+        console.log('🔄 Criando eventos recorrentes...');
+        const recurringEvents = generateRecurringEvents(baseEventData, eventForm);
+        
+        let createdCount = 0;
+        for (const eventData of recurringEvents) {
+          try {
+            await createEvent(eventData);
+            createdCount++;
+          } catch (error) {
+            console.error('Erro ao criar evento recorrente:', error);
+          }
+        }
+        
+        toast({
+          title: "Sucesso",
+          description: `${createdCount} eventos recorrentes criados! "${eventForm.title}" foi adicionado ao seu calendário.`
+        });
+      } else {
+        // Criar evento único
+        console.log('➕ Criando novo evento...');
+        await createEvent(baseEventData);
+        toast({
+          title: "Sucesso", 
+          description: `Evento criado! "${eventForm.title}" foi adicionado ao seu calendário.`
+        });
+      }
     }
 
     setShowEventDialog(false);
@@ -292,6 +322,36 @@ const handleCreateEvent = async (e: React.FormEvent) => {
   }
 };
 
+// Função para gerar eventos recorrentes
+const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
+  const events = [];
+  const startDate = new Date(baseEvent.start_date);
+  const endDate = new Date(baseEvent.end_date);
+  const duration = endDate.getTime() - startDate.getTime();
+
+  for (let i = 0; i < form.recurring_count; i++) {
+    const eventStartDate = new Date(startDate);
+    
+    if (form.recurring_type === 'days') {
+      eventStartDate.setDate(startDate.getDate() + (i * form.recurring_interval));
+    } else if (form.recurring_type === 'weeks') {
+      eventStartDate.setDate(startDate.getDate() + (i * form.recurring_interval * 7));
+    } else if (form.recurring_type === 'months') {
+      eventStartDate.setMonth(startDate.getMonth() + (i * form.recurring_interval));
+    }
+
+    const eventEndDate = new Date(eventStartDate.getTime() + duration);
+
+    events.push({
+      ...baseEvent,
+      start_date: eventStartDate.toISOString(),
+      end_date: eventEndDate.toISOString()
+    });
+  }
+
+  return events;
+};
+
   const handleEditEvent = (event: CalendarEvent) => {
     setEditingEvent(event);
     const isCustomLocation = event.location && !hospitals.find(h => h.name === event.location);
@@ -304,7 +364,11 @@ const handleCreateEvent = async (e: React.FormEvent) => {
       description: event.description || '',
       value: event.value ? event.value.toString() : '',
       status: event.status,
-      hospital_id: event.hospital_id || ''
+      hospital_id: event.hospital_id || '',
+      is_recurring: false, // Existing events are not recurring for editing
+      recurring_type: 'days',
+      recurring_interval: 1,
+      recurring_count: 1
     });
     setCustomLocation(isCustomLocation ? (event.location || '') : '');
     setShowEventDialog(true);
@@ -872,6 +936,80 @@ const handleCreateEvent = async (e: React.FormEvent) => {
                     rows={3}
                   />
                 </div>
+
+                {/* Campos de Recorrência */}
+                {!editingEvent && (
+                  <div className="space-y-4 p-4 bg-muted rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="is_recurring"
+                        checked={eventForm.is_recurring}
+                        onChange={(e) => setEventForm(prev => ({ ...prev, is_recurring: e.target.checked }))}
+                        className="rounded"
+                      />
+                      <Label htmlFor="is_recurring" className="font-medium">
+                        Evento Recorrente
+                      </Label>
+                    </div>
+                    
+                    {eventForm.is_recurring && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <Label htmlFor="recurring_interval">A cada</Label>
+                            <Input
+                              id="recurring_interval"
+                              type="number"
+                              min="1"
+                              max="30"
+                              value={eventForm.recurring_interval}
+                              onChange={(e) => setEventForm(prev => ({ ...prev, recurring_interval: parseInt(e.target.value) || 1 }))}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="recurring_type">Período</Label>
+                            <Select value={eventForm.recurring_type} onValueChange={(value) => setEventForm(prev => ({ ...prev, recurring_type: value }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="days">Dia(s)</SelectItem>
+                                <SelectItem value="weeks">Semana(s)</SelectItem>
+                                <SelectItem value="months">Mês(es)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="recurring_count">Repetições</Label>
+                            <Input
+                              id="recurring_count"
+                              type="number"
+                              min="1"
+                              max="52"
+                              value={eventForm.recurring_count}
+                              onChange={(e) => setEventForm(prev => ({ ...prev, recurring_count: parseInt(e.target.value) || 1 }))}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="text-sm text-muted-foreground">
+                          {eventForm.recurring_count > 1 && (
+                            <p>
+                              Será criado um total de <strong>{eventForm.recurring_count} eventos</strong>, 
+                              um a cada <strong>{eventForm.recurring_interval}</strong> {
+                                eventForm.recurring_type === 'days' ? 'dia(s)' :
+                                eventForm.recurring_type === 'weeks' ? 'semana(s)' : 'mês(es)'
+                              }.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex justify-between">
                   <div>
