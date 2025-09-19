@@ -75,7 +75,15 @@ const Navigation: React.FC = () => {
       path: '/offline',
       icon: WifiOff,
       color: 'muted'
-    }
+    },
+    // Página de teste (apenas em desenvolvimento)
+    ...(import.meta.env.MODE === 'development' ? [{
+      name: 'Testes',
+      path: '/test',
+      icon: Settings,
+      color: 'secondary',
+      badge: 'DEV'
+    }] : [])
   ];
 
   const getNavItemClasses = (path: string, color: string) => {
