@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useSupabaseEvents } from '@/hooks/useSupabaseEvents';
+import { useSupabaseEventsFixed as useSupabaseEvents } from '@/hooks/useSupabaseEventsFixed';
 import { useCalendars } from '@/hooks/useCalendars';
 import { useHospitals } from '@/hooks/useHospitals';
 import { useProfile } from '@/hooks/useProfile';
@@ -153,6 +153,8 @@ const handleCreateEvent = async (e: React.FormEvent) => {
   e.preventDefault();
   
   try {
+    console.log('📝 Iniciando criação/edição de evento...', eventForm);
+
     // Validação de campos obrigatórios
     if (!eventForm.title.trim()) {
       toast({
@@ -181,6 +183,28 @@ const handleCreateEvent = async (e: React.FormEvent) => {
       return;
     }
 
+    // Validação de datas
+    const startDate = new Date(eventForm.start_time);
+    const endDate = new Date(eventForm.end_time);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      toast({
+        title: "Erro",
+        description: "Formato de data inválido",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (startDate >= endDate) {
+      toast({
+        title: "Erro",
+        description: "A data de início deve ser anterior à data de fim",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Mapeamento correto dos valores para o banco de dados
     const eventTypeMapping = {
       'PLANTAO': 'plantao',
@@ -199,27 +223,40 @@ const handleCreateEvent = async (e: React.FormEvent) => {
       'REALIZADO': 'completed'
     };
 
+    // Preparar dados do evento
     const eventData = {
       title: eventForm.title.trim(),
       event_type: eventTypeMapping[eventForm.event_type as keyof typeof eventTypeMapping] || 'plantao',
-      start_date: new Date(eventForm.start_time).toISOString(),
-      end_date: new Date(eventForm.end_time).toISOString(),
-      location: eventForm.location === 'outro' ? customLocation : eventForm.location,
-      description: eventForm.description || null,
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+      location: eventForm.location === 'outro' ? customLocation.trim() : eventForm.location,
+      description: eventForm.description?.trim() || null,
       value: eventForm.value ? parseFloat(eventForm.value.toString()) : null,
       status: statusMapping[eventForm.status as keyof typeof statusMapping] || 'confirmed',
-      user_id: profile?.id
+      user_id: profile?.user_id || profile?.id // Usar user_id do perfil
     };
 
-    console.log('Dados do evento a serem enviados:', eventData);
+    // Validar se temos o user_id
+    if (!eventData.user_id) {
+      toast({
+        title: "Erro",
+        description: "Erro de autenticação. Faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    console.log('📤 Dados do evento preparados:', eventData);
 
     if (editingEvent) {
+      console.log('✏️ Atualizando evento existente:', editingEvent.id);
       await updateEvent(editingEvent.id, eventData);
       toast({
         title: "Sucesso",
         description: "Evento atualizado com sucesso!"
       });
     } else {
+      console.log('➕ Criando novo evento...');
       await createEvent(eventData);
       toast({
         title: "Sucesso", 
@@ -229,11 +266,27 @@ const handleCreateEvent = async (e: React.FormEvent) => {
 
     setShowEventDialog(false);
     resetEventForm();
+    
   } catch (error) {
-    console.error('Erro inesperado:', error);
+    console.error('💥 Erro ao processar evento:', error);
+    
+    let errorMessage = "Erro inesperado ao processar evento";
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid API key')) {
+        errorMessage = "Problema de configuração. Verifique as chaves do Supabase.";
+      } else if (error.message.includes('relation "events" does not exist')) {
+        errorMessage = "Tabela de eventos não encontrada no banco de dados.";
+      } else if (error.message.includes('violates check constraint')) {
+        errorMessage = "Dados inválidos. Verifique os campos preenchidos.";
+      } else {
+        errorMessage = `Erro: ${error.message}`;
+      }
+    }
+    
     toast({
       title: "Erro",
-      description: "Erro inesperado ao processar evento",
+      description: errorMessage,
       variant: "destructive"
     });
   }
