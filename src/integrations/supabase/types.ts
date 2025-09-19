@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_credentials: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          last_sync_at: string | null
+          provider_id: string
+          refresh_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_sync_at?: string | null
+          provider_id: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_sync_at?: string | null
+          provider_id?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       calendar_sync_settings: {
         Row: {
           access_token: string | null
@@ -143,6 +179,8 @@ export type Database = {
           location: string | null
           start_date: string
           status: string | null
+          tax_rate: number | null
+          tax_type: string | null
           title: string
           updated_at: string
           user_id: string
@@ -162,6 +200,8 @@ export type Database = {
           location?: string | null
           start_date: string
           status?: string | null
+          tax_rate?: number | null
+          tax_type?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -181,6 +221,8 @@ export type Database = {
           location?: string | null
           start_date?: string
           status?: string | null
+          tax_rate?: number | null
+          tax_type?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -405,7 +447,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_status: {
+        Row: {
+          last_sync_at: string | null
+          provider_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          last_sync_at?: string | null
+          provider_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          last_sync_at?: string | null
+          provider_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

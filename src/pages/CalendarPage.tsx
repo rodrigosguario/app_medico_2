@@ -52,6 +52,8 @@ interface CalendarEvent {
   description?: string;
   calendar_id?: string;
   hospital_id?: string;
+  tax_type?: string | null;
+  tax_rate?: number | null;
 }
 
 type ViewMode = 'month' | 'week' | 'day';
@@ -105,7 +107,9 @@ useEffect(() => {
     is_recurring: false,
     recurring_type: 'days',
     recurring_interval: 1,
-    recurring_count: 1
+    recurring_count: 1,
+    tax_type: null as string | null,
+    tax_rate: null as number | null
   });
 
   const [customLocation, setCustomLocation] = useState('');
@@ -151,7 +155,9 @@ useEffect(() => {
       is_recurring: false,
       recurring_type: 'days',
       recurring_interval: 1,
-      recurring_count: 1
+      recurring_count: 1,
+      tax_type: null,
+      tax_rate: null
     });
     setCustomLocation('');
     setEditingEvent(null);
@@ -241,7 +247,9 @@ const handleCreateEvent = async (e: React.FormEvent) => {
       description: eventForm.description?.trim() || null,
       value: eventForm.value ? parseFloat(eventForm.value.toString()) : null,
       status: statusMapping[eventForm.status as keyof typeof statusMapping] || 'confirmed',
-      user_id: profile?.user_id || profile?.id
+      user_id: profile?.user_id || profile?.id,
+      tax_type: eventForm.tax_type || null,
+      tax_rate: eventForm.tax_rate || null
     };
 
     // Validar se temos o user_id
@@ -368,7 +376,9 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
       is_recurring: false, // Existing events are not recurring for editing
       recurring_type: 'days',
       recurring_interval: 1,
-      recurring_count: 1
+      recurring_count: 1,
+      tax_type: event.tax_type || null,
+      tax_rate: event.tax_rate || null
     });
     setCustomLocation(isCustomLocation ? (event.location || '') : '');
     setShowEventDialog(true);
@@ -923,6 +933,43 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Configurações de Imposto */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tax_type">Tipo de Imposto</Label>
+                    <Select value={eventForm.tax_type || ''} onValueChange={(value) => setEventForm(prev => ({ ...prev, tax_type: value || null }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de imposto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Usar padrão do perfil</SelectItem>
+                        <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
+                        <SelectItem value="sociedade_simples_limitada">Sociedade Simples Limitada</SelectItem>
+                        <SelectItem value="mei">MEI</SelectItem>
+                        <SelectItem value="pessoa_fisica">Pessoa Física</SelectItem>
+                        <SelectItem value="isento">Isento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="tax_rate">Taxa de Imposto (%)</Label>
+                    <Input
+                      id="tax_rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={eventForm.tax_rate || ''}
+                      onChange={(e) => setEventForm(prev => ({ ...prev, tax_rate: e.target.value ? parseFloat(e.target.value) : null }))}
+                      placeholder="Taxa personalizada (ex: 11.50)"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Deixe vazio para usar a taxa padrão do perfil
+                    </p>
                   </div>
                 </div>
 

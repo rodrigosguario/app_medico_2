@@ -18,6 +18,8 @@ interface Event {
   user_id: string;
   created_at: string;
   updated_at: string;
+  tax_type?: string | null;
+  tax_rate?: number | null;
 }
 
 interface CreateEventData {
@@ -32,6 +34,8 @@ interface CreateEventData {
   calendar_id?: string;
   hospital_id?: string;
   user_id: string;
+  tax_type?: string | null;
+  tax_rate?: number | null;
 }
 
 export const useSupabaseEventsFixed = () => {
