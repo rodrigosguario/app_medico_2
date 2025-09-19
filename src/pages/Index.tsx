@@ -1,6 +1,6 @@
 import React from 'react';
 import Dashboard from './Dashboard';
-import { DebugConnectionStatus } from '@/components/DebugConnectionStatus';
+import DebugConnectionStatus from '@/components/DebugConnectionStatus';
 
 const Index = () => {
   return (

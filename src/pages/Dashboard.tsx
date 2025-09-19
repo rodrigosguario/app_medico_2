@@ -120,37 +120,37 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-            {/* Heat Map */}
-            <HeatMap />
+          {/* Heat Map */}
+          <HeatMap />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      {/* AI Assistant Sidebar */}
-      {isVisible && (
-        <aside className={cn(
-          "fixed right-0 top-0 h-full w-96 bg-background border-l border-border z-40 transition-transform duration-300",
-          isMinimized ? "translate-x-full" : "translate-x-0"
-        )}>
-          <div className="h-full pt-16">
-            <AIAssistant 
-              className="h-full"
-              minimized={isMinimized}
-              onMinimizeToggle={toggleMinimized}
-            />
-          </div>
-        </aside>
-      )}
+        {/* AI Assistant Sidebar */}
+        {isVisible && (
+          <aside className={cn(
+            "fixed right-0 top-0 h-full w-96 bg-background border-l border-border z-40 transition-transform duration-300",
+            isMinimized ? "translate-x-full" : "translate-x-0"
+          )}>
+            <div className="h-full pt-16">
+              <AIAssistant 
+                className="h-full"
+                minimized={isMinimized}
+                onMinimizeToggle={toggleMinimized}
+              />
+            </div>
+          </aside>
+        )}
 
-      {/* Minimized Assistant Button */}
-      {isMinimized && (
-        <AIAssistant 
-          minimized={true}
-          onMinimizeToggle={toggleMinimized}
-        />
-      )}
+        {/* Minimized Assistant Button */}
+        {isMinimized && (
+          <AIAssistant 
+            minimized={true}
+            onMinimizeToggle={toggleMinimized}
+          />
+        )}
+      </div>
     </div>
-  </div>
   );
 };
 

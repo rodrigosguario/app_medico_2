@@ -1,42 +1,131 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DayData {
+  date: string;
+  intensity: number;
+  hours: number;
+  eventCount: number;
+}
+
+interface WeekData {
+  days: (DayData | null)[];
+}
 
 const HeatMap: React.FC = () => {
-  const [heatMapData, setHeatMapData] = useState<number[][]>([]);
+  const [heatMapData, setHeatMapData] = useState<WeekData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    activeDays: 0,
+    intenseDays: 0,
+    averageIntensity: 0
+  });
 
   useEffect(() => {
-    generateHeatMapData();
+    loadRealHeatMapData();
   }, []);
 
-  const generateHeatMapData = () => {
-    // Gera dados de exemplo para 4 semanas
-    const weeks = 4;
-    const daysPerWeek = 7;
-    const data: number[][] = [];
+  const loadRealHeatMapData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get user
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData?.user) return;
 
-    for (let week = 0; week < weeks; week++) {
-      const weekData: number[] = [];
-      for (let day = 0; day < daysPerWeek; day++) {
-        // Simula intensidade baseada em padrões reais
-        let intensity = 0;
+      // Get events from the last 4 weeks
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 28); // 4 weeks
+
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('start_date, end_date, title')
+        .eq('user_id', authData.user.id)
+        .gte('start_date', startDate.toISOString())
+        .lte('start_date', endDate.toISOString())
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Process events into daily data
+      const dailyData: { [key: string]: DayData } = {};
+
+      (events || []).forEach(event => {
+        const eventDate = new Date(event.start_date);
+        const endEventDate = new Date(event.end_date);
+        const dateKey = eventDate.toISOString().split('T')[0];
         
-        // Médicos trabalham mais durante a semana
-        if (day >= 1 && day <= 5) {
-          intensity = Math.random() * 0.7 + 0.1;
-        } else {
-          intensity = Math.random() * 0.3;
+        const hours = (endEventDate.getTime() - eventDate.getTime()) / (1000 * 60 * 60);
+
+        if (!dailyData[dateKey]) {
+          dailyData[dateKey] = {
+            date: dateKey,
+            intensity: 0,
+            hours: 0,
+            eventCount: 0
+          };
+        }
+
+        dailyData[dateKey].hours += hours;
+        dailyData[dateKey].eventCount += 1;
+      });
+
+      // Calculate intensity based on hours worked (normalize to 0-1 scale)
+      // Consider 12+ hours as maximum intensity (1.0)
+      Object.values(dailyData).forEach(day => {
+        day.intensity = Math.min(day.hours / 12, 1);
+      });
+
+      // Create 4-week grid structure
+      const weeks: WeekData[] = [];
+      const today = new Date();
+      
+      for (let weekOffset = 3; weekOffset >= 0; weekOffset--) {
+        const week: WeekData = { days: [] };
+        
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - (weekOffset * 7) - (6 - dayOfWeek));
+          const dateKey = date.toISOString().split('T')[0];
+          
+          // Only show days that are not in the future
+          if (date <= today) {
+            week.days.push(dailyData[dateKey] || {
+              date: dateKey,
+              intensity: 0,
+              hours: 0,
+              eventCount: 0
+            });
+          } else {
+            week.days.push(null);
+          }
         }
         
-        // Algumas semanas são mais intensas
-        if (week === 2) {
-          intensity *= 1.5;
-        }
-        
-        weekData.push(Math.min(intensity, 1));
+        weeks.push(week);
       }
-      data.push(weekData);
-    }
 
-    setHeatMapData(data);
+      setHeatMapData(weeks);
+
+      // Calculate statistics
+      const allDays = Object.values(dailyData);
+      const activeDays = allDays.filter(day => day.intensity > 0).length;
+      const intenseDays = allDays.filter(day => day.intensity > 0.7).length;
+      const averageIntensity = allDays.length > 0 
+        ? allDays.reduce((sum, day) => sum + day.intensity, 0) / allDays.length
+        : 0;
+
+      setStats({
+        activeDays,
+        intenseDays,
+        averageIntensity
+      });
+
+    } catch (error) {
+      console.error('Erro ao carregar dados do mapa de calor:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getIntensityColor = (intensity: number) => {
@@ -49,15 +138,34 @@ const HeatMap: React.FC = () => {
 
   const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  if (heatMapData.length === 0) {
-    return <div className="animate-pulse bg-gray-200 h-32 rounded"></div>;
+  if (loading || heatMapData.length === 0) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Mapa de Carga de Trabalho
+        </h3>
+        <div className="animate-pulse bg-gray-200 h-32 rounded"></div>
+      </div>
+    );
   }
 
-  // Cálculo de estatísticas
-  const totalDays = heatMapData.flat();
-  const activeDays = totalDays.filter(intensity => intensity > 0).length;
-  const intenseDays = totalDays.filter(intensity => intensity > 0.7).length;
-  const averageIntensity = totalDays.reduce((sum, intensity) => sum + intensity, 0) / totalDays.length;
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  };
+
+  const getWeekLabel = (week: WeekData, weekIndex: number) => {
+    const firstDay = week.days.find(day => day !== null);
+    if (!firstDay) return `Semana ${weekIndex + 1}`;
+    
+    const date = new Date(firstDay.date);
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+    
+    return formatDate(weekStart.toISOString().split('T')[0]);
+  };
+
+  // Cálculo de estatísticas removido - agora usamos stats do state
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -81,14 +189,20 @@ const HeatMap: React.FC = () => {
         {/* Linhas do heat map */}
         {heatMapData.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-8 gap-1">
-            <div className="text-xs text-gray-500 pr-2">
-              Semana {weekIndex + 1}
+            <div className="text-xs text-gray-500 pr-2 flex items-center">
+              {getWeekLabel(week, weekIndex)}
             </div>
-            {week.map((intensity, dayIndex) => (
+            {week.days.map((day, dayIndex) => (
               <div
                 key={dayIndex}
-                className={`h-4 w-full rounded-sm ${getIntensityColor(intensity)} cursor-pointer hover:opacity-80 transition-opacity`}
-                title={`Semana ${weekIndex + 1}, ${dayLabels[dayIndex]}: ${Math.round(intensity * 100)}% intensidade`}
+                className={`h-4 w-full rounded-sm cursor-pointer hover:opacity-80 transition-opacity ${
+                  day ? getIntensityColor(day.intensity) : 'bg-gray-50'
+                }`}
+                title={
+                  day 
+                    ? `${formatDate(day.date)} (${dayLabels[dayIndex]}): ${day.eventCount} eventos, ${day.hours.toFixed(1)}h, ${Math.round(day.intensity * 100)}% intensidade`
+                    : 'Sem dados'
+                }
               />
             ))}
           </div>
@@ -112,16 +226,16 @@ const HeatMap: React.FC = () => {
       {/* Estatísticas */}
       <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
         <div className="text-center">
-          <div className="text-2xl font-bold text-medical">{activeDays}</div>
+          <div className="text-2xl font-bold text-blue-600">{stats.activeDays}</div>
           <div className="text-xs text-gray-500">Dias com atividade</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-orange-600">{intenseDays}</div>
+          <div className="text-2xl font-bold text-orange-600">{stats.intenseDays}</div>
           <div className="text-xs text-gray-500">Dias intensos</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-emerald-600">
-            {Math.round(averageIntensity * 100)}%
+            {Math.round(stats.averageIntensity * 100)}%
           </div>
           <div className="text-xs text-gray-500">Intensidade média</div>
         </div>

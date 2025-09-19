@@ -220,6 +220,7 @@ Deno.serve(async (req: Request) => {
       return badRequest('Use POST ou /callback')
     }
 
+    // Only require auth for non-callback requests
     const auth = req.headers.get('authorization') || ''
     if (!auth.startsWith('Bearer ')) {
       return badRequest('Missing or invalid Authorization header')

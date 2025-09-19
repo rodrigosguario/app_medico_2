@@ -86,15 +86,21 @@ const Navigation: React.FC = () => {
     }] : [])
   ];
 
-  const getNavItemClasses = (path: string, color: string) => {
-    const isActive = location.pathname === path;
-    const baseClasses = "flex items-center space-x-2 px-3 py-4 border-b-2 font-medium text-sm relative transition-colors";
-    
-    if (isActive) {
-      return `${baseClasses} border-${color} text-${color}`;
+  const getActiveNavClasses = (color: string) => {
+    switch (color) {
+      case 'medical':
+        return 'border-primary text-primary';
+      case 'primary':
+        return 'border-primary text-primary';
+      case 'success':
+        return 'border-emerald-500 text-emerald-600';
+      case 'warning':
+        return 'border-amber-500 text-amber-600';
+      case 'muted':
+        return 'border-muted-foreground text-muted-foreground';
+      default:
+        return 'border-primary text-primary';
     }
-    
-    return `${baseClasses} border-transparent text-muted-foreground hover:text-foreground hover:border-border`;
   };
 
   return (
@@ -179,7 +185,7 @@ const Navigation: React.FC = () => {
                   className={({ isActive }) => 
                     `flex items-center space-x-2 px-3 py-2 sm:py-4 border-b-2 font-medium text-sm relative transition-colors whitespace-nowrap ${
                       isActive 
-                        ? `border-${item.color} text-${item.color}` 
+                        ? getActiveNavClasses(item.color)
                         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                     }`
                   }
