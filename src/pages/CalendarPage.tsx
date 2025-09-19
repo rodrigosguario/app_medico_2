@@ -940,12 +940,12 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="tax_type">Tipo de Imposto</Label>
-                    <Select value={eventForm.tax_type || ''} onValueChange={(value) => setEventForm(prev => ({ ...prev, tax_type: value || null }))}>
+                    <Select value={eventForm.tax_type || 'default'} onValueChange={(value) => setEventForm(prev => ({ ...prev, tax_type: value === 'default' ? null : value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o tipo de imposto" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Usar padrão do perfil</SelectItem>
+                        <SelectItem value="default">Usar padrão do perfil</SelectItem>
                         <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
                         <SelectItem value="sociedade_simples_limitada">Sociedade Simples Limitada</SelectItem>
                         <SelectItem value="mei">MEI</SelectItem>
