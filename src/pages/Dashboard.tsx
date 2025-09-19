@@ -81,34 +81,34 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <MetricCard
               title="Horas Totais"
-              value={`${dashboardData?.metrics?.total_hours || 156}h`}
+              value={`${dashboardData?.metrics?.total_hours || 0}h`}
               subtitle="Este mês"
               icon={Clock}
-              trend={{ value: 12, isPositive: true }}
+              trend={dashboardData?.metrics?.total_hours ? { value: 12, isPositive: true } : undefined}
               variant="primary"
             />
             <MetricCard
               title="Plantões"
-              value={`${dashboardData?.metrics?.total_shifts || 24}`}
+              value={`${dashboardData?.metrics?.total_shifts || 0}`}
               subtitle="Plantões realizados"
               icon={Stethoscope}
-              trend={{ value: 8, isPositive: true }}
+              trend={dashboardData?.metrics?.total_shifts ? { value: 8, isPositive: true } : undefined}
               variant="secondary"
             />
             <MetricCard
               title="Receita Mensal"
-              value={`R$ ${(dashboardData?.metrics?.monthly_revenue || 25680).toLocaleString('pt-BR')}`}
+              value={`R$ ${(dashboardData?.metrics?.monthly_revenue || 0).toLocaleString('pt-BR')}`}
               subtitle="Receita bruta"
               icon={DollarSign}
-              trend={{ value: 15, isPositive: true }}
+              trend={dashboardData?.metrics?.monthly_revenue ? { value: 15, isPositive: true } : undefined}
               variant="success"
             />
             <MetricCard
               title="Taxa de Conclusão"
-              value={`${dashboardData?.metrics?.completion_rate || 94}%`}
+              value={`${dashboardData?.metrics?.completion_rate || 0}%`}
               subtitle="Eventos realizados"
               icon={TrendingUp}
-              trend={{ value: 3, isPositive: true }}
+              trend={dashboardData?.metrics?.completion_rate ? { value: 3, isPositive: true } : undefined}
               variant="accent"
             />
           </div>

@@ -88,20 +88,22 @@ const QuickSummary: React.FC<QuickSummaryProps> = ({ summary }) => {
       </div>
 
       {/* Notificação importante moderna */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 
-                      border border-amber-200 rounded-xl">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-amber-800 mb-1">Lembrete</h4>
-            <p className="text-sm text-amber-700">
-              Você tem <strong>2 plantões confirmados</strong> para esta semana
-            </p>
+      {summary.events_this_week > 0 && (
+        <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 
+                        border border-amber-200 rounded-xl">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-amber-800 mb-1">Lembrete</h4>
+              <p className="text-sm text-amber-700">
+                Você tem <strong>{summary.events_this_week} eventos confirmados</strong> para esta semana
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
