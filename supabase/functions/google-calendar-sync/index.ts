@@ -210,7 +210,7 @@ Deno.serve(async (req: Request) => {
 
   const url = new URL(req.url)
   try {
-    // Callback da autorização do Google
+    // Callback da autorização do Google (não requer autenticação)
     if (url.pathname.endsWith('/callback')) {
       return await handleCallback(req)
     }
@@ -220,7 +220,7 @@ Deno.serve(async (req: Request) => {
       return badRequest('Use POST ou /callback')
     }
 
-    // Only require auth for non-callback requests
+    // Verificar autenticação apenas para requisições POST (não para callback)
     const auth = req.headers.get('authorization') || ''
     if (!auth.startsWith('Bearer ')) {
       return badRequest('Missing or invalid Authorization header')
