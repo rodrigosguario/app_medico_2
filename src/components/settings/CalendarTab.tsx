@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import { Calendar, RefreshCcw, Link as LinkIcon, Unlink } from 'lucide-react'
-import { GoogleCalendarSync } from '@/components/GoogleCalendarSync'
 
 type ProviderId = 'google' | 'outlook' | 'icloud'
 
@@ -45,9 +44,7 @@ async function getSessionAndUser() {
 }
 
 function fnUrl(fn: string) {
-  const base = import.meta.env.VITE_SUPABASE_URL
-  if (!base) throw new Error('VITE_SUPABASE_URL ausente')
-  return `${base}/functions/v1/${fn}`
+  return `https://kmwsoppkrjzjioeadtqb.supabase.co/functions/v1/${fn}`
 }
 
 export function CalendarTab() {
@@ -257,19 +254,14 @@ export function CalendarTab() {
       </div>
       <Separator />
       
-      {/* Novo componente do Google Calendar */}
-      <GoogleCalendarSync />
-      
-      {/* Outros provedores (Outlook, iCloud) - mantidos para futuro */}
+      {/* Provedores de calendário */}
       {loading ? (
-        <div className="text-sm text-muted-foreground">Carregando outros provedores...</div>
+        <div className="text-sm text-muted-foreground">Carregando provedores...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(Object.keys(providers) as ProviderId[])
-            .filter(id => id !== 'google') // Excluir Google pois já tem componente próprio
-            .map((id) => (
-              <ProviderCard key={id} p={providers[id]} />
-            ))}
+          {(Object.keys(providers) as ProviderId[]).map((id) => (
+            <ProviderCard key={id} p={providers[id]} />
+          ))}
         </div>
       )}
     </div>

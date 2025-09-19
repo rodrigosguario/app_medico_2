@@ -59,9 +59,17 @@ function buildRedirectUriFromEnv() {
 // ---------- Handlers ----------
 
 async function handleConnect(userId: string) {
+  console.log('🔗 Iniciando conexão Google Calendar para usuário:', userId)
+  
   const clientId = getEnvOrNull('GOOGLE_CLIENT_ID')
   const clientSecret = getEnvOrNull('GOOGLE_CLIENT_SECRET')
   const redirectUri = buildRedirectUriFromEnv()
+
+  console.log('🔧 Configurações OAuth:', {
+    clientId: clientId ? `DEFINIDO (${clientId.substring(0, 10)}...)` : 'AUSENTE',
+    clientSecret: clientSecret ? 'DEFINIDO' : 'AUSENTE',
+    redirectUri
+  })
 
   // Validamos tudo e falamos exatamente o que falta
   const missing: string[] = []
@@ -70,7 +78,8 @@ async function handleConnect(userId: string) {
   if (!redirectUri) missing.push('GOOGLE_REDIRECT_URI (ou SUPABASE_URL)')
 
   if (missing.length) {
-    return badRequest(`Missing required parameters: ${missing.join(', ')}`)
+    console.error('❌ Configurações ausentes:', missing)
+    return badRequest(`Configuração OAuth incompleta. Configure no Supabase Dashboard: ${missing.join(', ')}`)
   }
 
   const scope = [
@@ -90,6 +99,8 @@ async function handleConnect(userId: string) {
   })
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  console.log('✅ URL de autorização gerada')
+  
   return json({ authUrl })
 }
 
@@ -98,7 +109,10 @@ async function handleCallback(req: Request) {
   const code = url.searchParams.get('code')
   const userId = url.searchParams.get('state') // veio de "state" no connect
 
+  console.log('🔄 Callback recebido:', { code: !!code, userId })
+
   if (!code || !userId) {
+    console.error('❌ Callback inválido - code ou userId ausente')
     return badRequest('Missing code or state (userId)')
   }
 
@@ -107,9 +121,12 @@ async function handleCallback(req: Request) {
   const redirectUri = buildRedirectUriFromEnv()
 
   if (!clientId || !clientSecret || !redirectUri) {
+    console.error('❌ Configurações OAuth ausentes:', { clientId: !!clientId, clientSecret: !!clientSecret, redirectUri })
     return badRequest('Missing required parameters for token exchange')
   }
 
+  console.log('🔗 Trocando code por tokens...')
+  
   // Troca "code" por tokens
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -125,9 +142,11 @@ async function handleCallback(req: Request) {
 
   const tokenJson = await tokenRes.json()
   if (!tokenRes.ok) {
-    console.error('Token exchange error:', tokenJson)
+    console.error('❌ Erro na troca de tokens:', tokenJson)
     return serverError('Failed to exchange authorization code')
   }
+
+  console.log('✅ Tokens obtidos com sucesso')
 
   const accessToken: string = tokenJson.access_token
   const refreshToken: string | undefined = tokenJson.refresh_token
@@ -149,15 +168,22 @@ async function handleCallback(req: Request) {
     }, { onConflict: 'user_id,provider_id' })
 
   if (error) {
-    console.error('DB upsert error:', error)
+    console.error('❌ Erro ao salvar no banco:', error)
     return serverError('Failed to persist credentials')
   }
 
-  // Você pode redirecionar de volta para o app
-  const appUrl = getEnvOrNull('APP_PUBLIC_URL') || '/'
+  console.log('✅ Credenciais salvas no banco')
+
+  // Redirecionar de volta para o app com sucesso
+  const appUrl = getEnvOrNull('APP_PUBLIC_URL') || 'https://f718139e-0921-4562-b04f-6519c248b00c.lovableproject.com'
+  const successUrl = `${appUrl}/#/oauth/callback?google_connected=true`
+  
   return new Response(null, {
     status: 302,
-    headers: { Location: appUrl, ...corsHeaders },
+    headers: { 
+      Location: successUrl, 
+      ...corsHeaders 
+    },
   })
 }
 

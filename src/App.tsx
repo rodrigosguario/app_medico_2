@@ -15,6 +15,7 @@ import OfflinePage from "./pages/OfflinePage";
 import SettingsPage from "./pages/SettingsPage";
 import TestPage from "./pages/TestPage";
 import NotFound from "./pages/NotFound";
+import OAuthCallback from "./pages/OAuthCallback";
 import { MobileOptimization } from '@/components/MobileOptimization';
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/offline" element={<OfflinePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/test" element={<TestPage />} />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
             {/* catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
