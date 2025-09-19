@@ -61,14 +61,14 @@ const QuickActions: React.FC = () => {
             <button
               key={index}
               onClick={action.onClick}
-              className={`group p-4 rounded-xl transition-all duration-200 text-left 
-                         flex items-center gap-3 font-medium hover:scale-[1.02] active:scale-[0.98] 
-                         ${action.color}`}
+              className={`group p-3 rounded-xl transition-all duration-200 text-left 
+                         flex flex-col items-center justify-center gap-2 font-medium hover:scale-[1.02] active:scale-[0.98] 
+                         min-h-[100px] ${action.color}`}
             >
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Icon className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
               </div>
-              <span className="text-sm font-semibold">{action.label}</span>
+              <span className="text-xs font-semibold text-center leading-tight">{action.label}</span>
             </button>
           );
         })}
