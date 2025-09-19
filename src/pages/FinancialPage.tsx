@@ -10,28 +10,51 @@ import {
   Filter,
   CreditCard,
   Banknote,
-  Receipt
+  Receipt,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useFinancialEvents } from '@/hooks/useFinancialEvents';
 import { AIAssistant } from '@/components/AIAssistant';
 import { AssistantButton } from '@/components/AssistantButton';
 import { useAIAssistant } from '@/hooks/useAIAssistant';
 import { useProfile } from '@/hooks/useProfile';
+import { useToast } from '@/hooks/use-toast';
 import Navigation from '../components/Navigation';
 import { cn } from '@/lib/utils';
 import { FinancialTransactionDialog } from '@/components/FinancialTransactionDialog';
 
 const FinancialPage: React.FC = () => {
-  const { financialEvents, loading, error, createFinancialEvent, syncEventsToFinancial } = useFinancialEvents();
+  const { financialEvents, loading, error, createFinancialEvent, deleteFinancialEvent, syncEventsToFinancial } = useFinancialEvents();
   const { isMinimized, isVisible, showAssistant, hideAssistant, toggleMinimized } = useAIAssistant();
   const { profile } = useProfile();
+  const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState('current_month');
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+
+  // Handle transaction deletion
+  const handleDeleteTransaction = async (id: string, title: string) => {
+    try {
+      await deleteFinancialEvent(id);
+      toast({
+        title: "Transação excluída",
+        description: `A transação "${title}" foi excluída com sucesso.`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a transação. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Calculate financial summary from financial events
   const calculateSummary = () => {
@@ -620,13 +643,45 @@ const FinancialPage: React.FC = () => {
                              </div>
                           </div>
                           
-                          <div className="text-right">
-                            <div className={`font-semibold ${getTransactionTypeColor(transaction.type)}`}>
-                              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(parseFloat(transaction.amount.toString()))}
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className={`font-semibold ${getTransactionTypeColor(transaction.type)}`}>
+                                {transaction.type === 'income' ? '+' : '-'}{formatCurrency(parseFloat(transaction.amount.toString()))}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {transaction.payment_method?.replace('_', ' ') || 'N/A'}
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {transaction.payment_method?.replace('_', ' ') || 'N/A'}
-                            </div>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir Transação</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir a transação "{transaction.title}"? 
+                                    Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteTransaction(transaction.id, transaction.title)}
+                                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       ))
