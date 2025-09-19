@@ -210,8 +210,11 @@ Deno.serve(async (req: Request) => {
 
   const url = new URL(req.url)
   try {
+    console.log('📍 Request path:', url.pathname, 'Method:', req.method)
+    
     // Callback da autorização do Google (não requer autenticação)
-    if (url.pathname.endsWith('/callback')) {
+    if (url.pathname.includes('/callback')) {
+      console.log('🔄 Processing Google OAuth callback')
       return await handleCallback(req)
     }
 

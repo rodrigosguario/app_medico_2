@@ -6,13 +6,7 @@ import { useAuth } from "@/components/AuthGuard";
 // Declaração de tipos para Google Identity Services
 declare global {
   interface Window {
-    google?: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (config: any) => any;
-        };
-      };
-    };
+    google?: any;
   }
 }
 
