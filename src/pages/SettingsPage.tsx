@@ -22,12 +22,16 @@ import { HospitalsTab } from '@/components/settings/HospitalsTab'
 import { CalendarTab } from '@/components/settings/CalendarTab'
 import { DataTab } from '@/components/settings/DataTab'
 import { SystemTab } from '@/components/settings/SystemTab'
+import Navigation from '@/components/Navigation'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <SettingsIcon className="h-6 w-6" />
@@ -90,6 +94,8 @@ export default function SettingsPage() {
           <SystemTab />
         </TabsContent>
       </Tabs>
+        </div>
+      </main>
     </div>
   )
 }

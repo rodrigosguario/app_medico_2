@@ -88,6 +88,7 @@ const QuickActions: React.FC = () => {
           ].map((template, index) => (
             <button 
               key={index}
+              onClick={() => navigate('/calendar?action=new&template=' + encodeURIComponent(template.text))}
               className="w-full text-left p-3 rounded-xl hover:bg-muted/50 
                          border border-border/30 hover:border-primary/20 
                          transition-all duration-200 group"
