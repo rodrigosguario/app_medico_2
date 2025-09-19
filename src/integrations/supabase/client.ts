@@ -1,16 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const supabaseUrl = "https://kmwsoppkrjzjioeadtqb.supabase.co"
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttd3NvcHBrcmp6amlvZWFkdHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3ODkzNzYsImV4cCI6MjA3MzM2NTM3Nn0.RsQd3r30Ezfi5x_Di2eLgkqm5SCDC9tlOIXIDRJcYMY"
 
 console.log('🔧 Configuração Supabase:', {
   url: supabaseUrl ? '✅ Definida' : '❌ Ausente',
-  key: supabaseAnonKey ? '✅ Definida' : '❌ Ausente',
-  environment: import.meta.env.MODE
+  key: supabaseAnonKey ? '✅ Definida' : '❌ Ausente'
 });
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  const errorMessage = 'Configuração do Supabase ausente. Verifique as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no arquivo .env';
+  const errorMessage = 'Configuração do Supabase ausente. Contate o suporte técnico.';
   console.error('❌', errorMessage);
   throw new Error(errorMessage);
 }
@@ -21,7 +20,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    debug: import.meta.env.MODE === 'development'
+    debug: false
   },
   global: {
     headers: { 
