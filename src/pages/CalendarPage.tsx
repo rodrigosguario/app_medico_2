@@ -10,7 +10,10 @@ import {
   Settings,
   Grid3X3,
   List,
-  Clock
+  Clock,
+  Copy,
+  Clipboard,
+  MoreVertical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useSupabaseEventsFixed as useSupabaseEvents } from '@/hooks/useSupabaseEventsFixed';
 import { useCalendars } from '@/hooks/useCalendars';
 import { useHospitals } from '@/hooks/useHospitals';
@@ -33,12 +37,14 @@ import { ZapierIntegration } from '@/components/ZapierIntegration';
 import { AIAssistant } from '@/components/AIAssistant';
 import { AssistantButton } from '@/components/AssistantButton';
 import Navigation from '../components/Navigation';
-import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
+import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, addWeeks, subWeeks, isPast, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedFeedbackToast } from '@/components/ImprovedFeedbackToast';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useEventActions } from '@/hooks/useEventActions';
+import { EventActions } from '@/components/EventActions';
+import { CopiedEventIndicator } from '@/components/CopiedEventIndicator';
 
 interface CalendarEvent {
   id: string;
@@ -73,9 +79,18 @@ const CalendarPage: React.FC = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  
+  const { 
+    copiedEvent, 
+    handleCopyEvent, 
+    handlePasteEvent, 
+    clearCopiedEvent,
+    updateEventStatusBasedOnDate 
+  } = useEventActions();
 
-  // Check if we should open the new event dialog based on URL params
-useEffect(() => {
+  // Aplicar atualização de status automática aos eventos
+  const eventsWithUpdatedStatus = events.map(updateEventStatusBasedOnDate);
+// Check if we should open the new event dialog based on URL params
   const searchParams = new URLSearchParams(location.search);
   if (searchParams.get('action') === 'new') {
     // Set default times when opening new event dialog
@@ -409,13 +424,13 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
   };
 
   const getEventsForDate = (date: Date): CalendarEvent[] => {
-    return events.filter(event => 
+    return eventsWithUpdatedStatus.filter(event => 
       isSameDay(new Date(event.start_date), date)
     ) as CalendarEvent[];
   };
 
   const getEventsForRange = (startDate: Date, endDate: Date): CalendarEvent[] => {
-    return events.filter(event => {
+    return eventsWithUpdatedStatus.filter(event => {
       const eventDate = new Date(event.start_date);
       return eventDate >= startDate && eventDate <= endDate;
     }) as CalendarEvent[];
@@ -490,26 +505,75 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
   }));
   setShowEventDialog(true);
 }}
-        >
-          <div className="font-medium text-sm mb-1">
-            {format(currentDay, 'd')}
-          </div>
-          <div className="space-y-1">
-            {dayEvents.slice(0, 2).map(event => (
-              <div
-                key={event.id}
-                className={cn(
-                  "text-xs p-1 rounded text-white truncate cursor-pointer",
-                  getEventTypeColor(event.event_type)
-                )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditEvent(event);
-                }}
-              >
-                {format(new Date(event.start_date), 'HH:mm')} {event.title}
-              </div>
-            ))}
+         >
+           <div className="font-medium text-sm mb-1 flex items-center justify-between">
+             <span>{format(currentDay, 'd')}</span>
+             {copiedEvent && (
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     className="h-6 w-6 p-0 hover:bg-primary/10"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       handlePasteEvent(currentDay);
+                     }}
+                   >
+                     <Clipboard className="h-3 w-3" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent>
+                   <p>Colar: {copiedEvent.title}</p>
+                 </TooltipContent>
+               </Tooltip>
+             )}
+           </div>
+           <div className="space-y-1">
+             {dayEvents.slice(0, 2).map(event => (
+               <div key={event.id} className="flex items-center gap-1">
+                 <div
+                   className={cn(
+                     "flex-1 text-xs p-1 rounded text-white truncate cursor-pointer",
+                     getEventTypeColor(event.event_type)
+                   )}
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     handleEditEvent(event);
+                   }}
+                 >
+                   {format(new Date(event.start_date), 'HH:mm')} {event.title}
+                 </div>
+                 <DropdownMenu>
+                   <DropdownMenuTrigger asChild>
+                     <Button
+                       variant="ghost"
+                       size="sm"
+                       className="h-5 w-5 p-0 hover:bg-white/20 text-white"
+                       onClick={(e) => e.stopPropagation()}
+                     >
+                       <MoreVertical className="h-3 w-3" />
+                     </Button>
+                   </DropdownMenuTrigger>
+                   <DropdownMenuContent align="end">
+                     <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+                       Editar
+                     </DropdownMenuItem>
+                     <DropdownMenuItem onClick={(e) => handleCopyEvent(event, e)}>
+                       <Copy className="h-4 w-4 mr-2" />
+                       Copiar
+                     </DropdownMenuItem>
+                     <DropdownMenuSeparator />
+                     <DropdownMenuItem 
+                       onClick={() => handleDeleteEvent(event.id)}
+                       className="text-destructive"
+                     >
+                       Excluir
+                     </DropdownMenuItem>
+                   </DropdownMenuContent>
+                 </DropdownMenu>
+               </div>
+             ))}
             {dayEvents.length > 2 && (
               <div className="text-xs text-muted-foreground">
                 +{dayEvents.length - 2} mais
@@ -557,25 +621,54 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
             <div className="font-medium">{format(currentDay, 'EEE', { locale: ptBR })}</div>
             <div className="text-lg">{format(currentDay, 'd')}</div>
           </div>
-          <div className="min-h-96 p-2 space-y-1 border-r border-border last:border-r-0">
-            {dayEvents.map(event => (
-              <div
-                key={event.id}
-                className={cn(
-                  "p-2 rounded text-white text-sm cursor-pointer",
-                  getEventTypeColor(event.event_type)
-                )}
-                onClick={() => handleEditEvent(event)}
-              >
-                <div className="font-medium">{event.title}</div>
-                <div className="text-xs opacity-90">
-                  {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
-                </div>
-                {event.location && (
-                  <div className="text-xs opacity-75">{event.location}</div>
-                )}
-              </div>
-            ))}
+           <div className="min-h-96 p-2 space-y-1 border-r border-border last:border-r-0">
+             {dayEvents.map(event => (
+               <div key={event.id} className="flex items-center gap-2">
+                 <div
+                   className={cn(
+                     "flex-1 p-2 rounded text-white text-sm cursor-pointer",
+                     getEventTypeColor(event.event_type)
+                   )}
+                   onClick={() => handleEditEvent(event)}
+                 >
+                   <div className="font-medium">{event.title}</div>
+                   <div className="text-xs opacity-90">
+                     {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
+                   </div>
+                   {event.location && (
+                     <div className="text-xs opacity-75">{event.location}</div>
+                   )}
+                 </div>
+                 <DropdownMenu>
+                   <DropdownMenuTrigger asChild>
+                     <Button
+                       variant="ghost"
+                       size="sm"
+                       className="h-8 w-8 p-0 hover:bg-muted"
+                       onClick={(e) => e.stopPropagation()}
+                     >
+                       <MoreVertical className="h-4 w-4" />
+                     </Button>
+                   </DropdownMenuTrigger>
+                   <DropdownMenuContent align="end">
+                     <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+                       Editar
+                     </DropdownMenuItem>
+                     <DropdownMenuItem onClick={(e) => handleCopyEvent(event, e)}>
+                       <Copy className="h-4 w-4 mr-2" />
+                       Copiar
+                     </DropdownMenuItem>
+                     <DropdownMenuSeparator />
+                     <DropdownMenuItem 
+                       onClick={() => handleDeleteEvent(event.id)}
+                       className="text-destructive"
+                     >
+                       Excluir
+                     </DropdownMenuItem>
+                   </DropdownMenuContent>
+                 </DropdownMenu>
+               </div>
+             ))}
           </div>
         </div>
       );
@@ -619,26 +712,55 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
                   <div className="w-20 p-2 text-center text-sm text-muted-foreground bg-muted/50">
                     {hour.toString().padStart(2, '0')}:00
                   </div>
-                  <div className="flex-1 p-2 min-h-12">
-                    {hourEvents.map(event => (
-                      <div
-                        key={event.id}
-                        className={cn(
-                          "mb-1 p-2 rounded text-white text-sm cursor-pointer",
-                          getEventTypeColor(event.event_type)
-                        )}
-                        onClick={() => handleEditEvent(event)}
-                      >
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-xs opacity-90">
-                          {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
-                        </div>
-                        {event.location && (
-                          <div className="text-xs opacity-75">{event.location}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                   <div className="flex-1 p-2 min-h-12">
+                     {hourEvents.map(event => (
+                       <div key={event.id} className="flex items-center gap-2 mb-1">
+                         <div
+                           className={cn(
+                             "flex-1 p-2 rounded text-white text-sm cursor-pointer",
+                             getEventTypeColor(event.event_type)
+                           )}
+                           onClick={() => handleEditEvent(event)}
+                         >
+                           <div className="font-medium">{event.title}</div>
+                           <div className="text-xs opacity-90">
+                             {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
+                           </div>
+                           {event.location && (
+                             <div className="text-xs opacity-75">{event.location}</div>
+                           )}
+                         </div>
+                         <DropdownMenu>
+                           <DropdownMenuTrigger asChild>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               className="h-8 w-8 p-0 hover:bg-muted"
+                               onClick={(e) => e.stopPropagation()}
+                             >
+                               <MoreVertical className="h-4 w-4" />
+                             </Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="end">
+                             <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+                               Editar
+                             </DropdownMenuItem>
+                             <DropdownMenuItem onClick={(e) => handleCopyEvent(event, e)}>
+                               <Copy className="h-4 w-4 mr-2" />
+                               Copiar
+                             </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem 
+                               onClick={() => handleDeleteEvent(event.id)}
+                               className="text-destructive"
+                             >
+                               Excluir
+                             </DropdownMenuItem>
+                           </DropdownMenuContent>
+                         </DropdownMenu>
+                       </div>
+                     ))}
+                   </div>
                 </div>
               );
             })}
@@ -687,23 +809,24 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
-      <div className="flex">
-        <main className={cn(
-          "flex-1 transition-all duration-300",
-          !isMinimized && isVisible ? "mr-96" : ""
-        )}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
-              <p className="text-muted-foreground">Gerencie seus compromissos e plantões</p>
-            </div>
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        
+        <div className="flex">
+          <main className={cn(
+            "flex-1 transition-all duration-300",
+            !isMinimized && isVisible ? "mr-96" : ""
+          )}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <TooltipProvider>
+                <div className="space-y-6">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
+                      <p className="text-muted-foreground">Gerencie seus compromissos e plantões</p>
+                    </div>
 
             <div className="flex items-center gap-2">
               <AssistantButton 
@@ -752,7 +875,7 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
 
           {/* Calendar Controls */}
           <div className="flex items-center justify-between">{" "}
-            <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="sm" onClick={() => navigateDate('prev')}>
                   <ChevronLeft className="h-4 w-4" />
@@ -807,10 +930,10 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
             </Tabs>
           </div>
 
-          {/* Calendar View */}
-          {viewMode === 'month' && renderMonthView()}
-          {viewMode === 'week' && renderWeekView()}
-          {viewMode === 'day' && renderDayView()}
+                  {/* Calendar View */}
+                  {viewMode === 'month' && renderMonthView()}
+                  {viewMode === 'week' && renderWeekView()}
+                  {viewMode === 'day' && renderDayView()}
 
           {/* Event Dialog */}
           <Dialog open={showEventDialog} onOpenChange={(open) => {
@@ -1091,9 +1214,9 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
               </form>
             </DialogContent>
           </Dialog>
+              </TooltipProvider>
             </div>
-          </div>
-        </main>
+          </main>
 
         {/* AI Assistant Sidebar */}
         {isVisible && (
