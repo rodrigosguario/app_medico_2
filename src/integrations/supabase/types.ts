@@ -447,24 +447,7 @@ export type Database = {
       }
     }
     Views: {
-      calendar_status: {
-        Row: {
-          last_sync_at: string | null
-          provider_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          last_sync_at?: string | null
-          provider_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          last_sync_at?: string | null
-          provider_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       sync_all_google_calendars: {

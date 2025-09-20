@@ -1,13 +1,25 @@
 // src/components/settings/CalendarTab.tsx
-import React from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Calendar, AlertTriangle, Info, ExternalLink, Download, Upload } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Calendar, AlertTriangle, Info, ExternalLink, Download, Upload, RefreshCw, Settings } from 'lucide-react'
 import { useICSManager } from '@/hooks/useICSManager'
+import { useCalendarSync } from '@/hooks/useCalendarSync'
 
 export function CalendarTab() {
   const { isImporting, isExporting, importICS, exportICS } = useICSManager()
+  const { 
+    providers, 
+    loading, 
+    connectGoogleCalendar, 
+    syncCalendar, 
+    disconnectProvider,
+    saveGeneralSettings 
+  } = useCalendarSync()
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
 
   const handleImportICS = () => {
     const input = document.createElement('input')
@@ -21,6 +33,17 @@ export function CalendarTab() {
     }
     input.click()
   }
+
+  const handleAutoSyncChange = async (enabled: boolean) => {
+    setAutoSyncEnabled(enabled)
+    await saveGeneralSettings({
+      autoSync: enabled,
+      syncNotifications: true,
+      bidirectionalSync: true
+    })
+  }
+
+  const googleProvider = providers.find(p => p.id === 'google')
 
   return (
     <div className="space-y-8">
@@ -61,13 +84,120 @@ export function CalendarTab() {
         </div>
       </div>
 
-      {/* Aviso sobre sincronizações em tempo real */}
+      {/* Google Calendar Integration */}
+      <div className="modern-card p-6 group animate-fade-in">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl transition-all duration-300 bg-primary/10 text-primary">
+              <Calendar className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-foreground">Google Calendar</h3>
+              <p className="text-muted-foreground mt-1">Sincronização automática com sua conta Google</p>
+            </div>
+          </div>
+          
+          <Badge 
+            variant="secondary" 
+            className={googleProvider?.status === 'connected' ? 
+              "bg-success/10 text-success border-success/20 px-3 py-1" : 
+              "bg-muted/10 text-muted-foreground border-muted/20 px-3 py-1"
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Info className="h-3 w-3" />
+              {googleProvider?.status === 'connected' ? 'Conectado' : 'Desconectado'}
+            </div>
+          </Badge>
+        </div>
+        
+        {googleProvider?.status === 'connected' && (
+          <div className="mb-4 p-4 bg-success/5 border border-success/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="auto-sync" className="text-sm font-medium">
+                  Sincronização Automática
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sincroniza automaticamente a cada 30 minutos
+                </p>
+              </div>
+              <Switch
+                id="auto-sync"
+                checked={autoSyncEnabled}
+                onCheckedChange={handleAutoSyncChange}
+              />
+            </div>
+            {googleProvider.lastSync && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Última sincronização: {googleProvider.lastSync}
+              </p>
+            )}
+          </div>
+        )}
+        
+        <div className="flex gap-3">
+          {googleProvider?.status === 'connected' ? (
+            <>
+              <Button 
+                onClick={() => syncCalendar('google')}
+                disabled={loading}
+                className="modern-button h-11"
+              >
+                <div className="flex items-center gap-2">
+                  {loading ? (
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {loading ? 'Sincronizando...' : 'Sincronizar Agora'}
+                </div>
+              </Button>
+              <Button 
+                onClick={() => disconnectProvider('google')}
+                disabled={loading}
+                variant="outline"
+                className="h-11"
+              >
+                Desconectar
+              </Button>
+            </>
+          ) : googleProvider?.status === 'syncing' ? (
+            <Button 
+              disabled
+              className="flex-1 modern-button h-11"
+            >
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Sincronizando...
+              </div>
+            </Button>
+          ) : (
+            <Button 
+              onClick={connectGoogleCalendar}
+              disabled={loading}
+              className="flex-1 modern-button h-11"
+            >
+              <div className="flex items-center gap-2">
+                {loading ? (
+                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Calendar className="h-4 w-4" />
+                )}
+                {loading ? 'Conectando...' : 'Conectar Google Calendar'}
+              </div>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Aviso sobre outros provedores */}
       <Alert className="border-warning/20 bg-warning/5">
         <AlertTriangle className="h-4 w-4 text-warning" />
         <AlertDescription className="text-sm leading-relaxed">
-          <strong>Sincronizações automáticas temporariamente desabilitadas.</strong><br />
-          As integrações diretas com Google Calendar, Outlook e Apple Calendar apresentaram problemas de configuração OAuth. 
-          Use a importação/exportação manual via arquivos ICS como alternativa confiável.
+          <strong>Outras integrações:</strong><br />
+          Microsoft Outlook e Apple Calendar estão em desenvolvimento. 
+          Use a sincronização do Google Calendar ou importação/exportação manual via arquivos ICS.
         </AlertDescription>
       </Alert>
 
