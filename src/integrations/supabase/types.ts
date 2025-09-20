@@ -467,7 +467,10 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      sync_all_google_calendars: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
