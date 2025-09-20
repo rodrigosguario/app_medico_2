@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Calendar, AlertTriangle, Info, ExternalLink, Download, Upload, RefreshCw, Settings } from 'lucide-react'
 import { useICSManager } from '@/hooks/useICSManager'
 import { useCalendarSync } from '@/hooks/useCalendarSync'
+import { GoogleClientSetup } from '@/components/GoogleClientSetup'
 
 export function CalendarTab() {
   const { isImporting, isExporting, importICS, exportICS } = useICSManager()
@@ -110,6 +111,10 @@ export function CalendarTab() {
             </div>
           </Badge>
         </div>
+        
+        {googleProvider?.status === 'disconnected' && (
+          <GoogleClientSetup />
+        )}
         
         {googleProvider?.status === 'connected' && (
           <div className="mb-4 p-4 bg-success/5 border border-success/20 rounded-lg">

@@ -34,9 +34,31 @@ function loadGoogleScript(): Promise<void> {
   });
 }
 
-// Remove hardcoded client IDs and use real OAuth
+// Google Client ID - substitua pelo seu próprio
+const GOOGLE_CLIENT_ID = '123456789-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com';
+
 async function getGoogleAccessToken(): Promise<string> {
-  throw new Error("Configure seu Client ID do Google nas configurações do projeto.\n\nPara obter:\n1. Acesse https://console.cloud.google.com/apis/credentials\n2. Crie um novo OAuth 2.0 Client ID\n3. Configure os domínios autorizados\n4. Substitua o Client ID no código");
+  return new Promise((resolve, reject) => {
+    // Carregar o Google Identity Services
+    loadGoogleScript().then(() => {
+      if (window.google && window.google.accounts) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (response: any) => {
+            if (response.credential) {
+              resolve(response.credential);
+            } else {
+              reject(new Error('Falha na autorização do Google'));
+            }
+          }
+        });
+        
+        window.google.accounts.id.prompt();
+      } else {
+        reject(new Error('Falha ao carregar a biblioteca do Google'));
+      }
+    }).catch(reject);
+  });
 }
 
 // Remove hardcoded client IDs and require real configuration
@@ -115,7 +137,16 @@ export function useCalendarSync() {
   const connectGoogleCalendar = async () => {
     try {
       setLoading(true);
-      console.log("🔗 Conectando Google Calendar...");
+      console.log("🔗 Tentativa de conexão com Google Calendar...");
+      
+      // Verificar se o Client ID foi configurado corretamente
+      if (GOOGLE_CLIENT_ID === '123456789-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com') {
+        feedbackToast.warning(
+          'Configuração Necessária',
+          'Configure seu Google Client ID real nas configurações do projeto para conectar ao Google Calendar.'
+        );
+        return;
+      }
       
       const accessToken = await getGoogleAccessToken();
 
@@ -165,8 +196,8 @@ export function useCalendarSync() {
       console.error("❌ Erro Google Calendar:", error);
       
       let errorMessage = "Falha ao conectar Google Calendar";
-      if (error?.message && error.message.includes("Configure o Google Client ID")) {
-        errorMessage = "Configure o Google Client ID no código primeiro!";
+      if (error?.message && error.message.includes("Configure")) {
+        errorMessage = "Configure o Google Client ID seguindo as instruções acima primeiro!";
       } else if (error?.message && error.message.includes("OAuth Error")) {
         errorMessage = "Erro de autenticação OAuth. Verifique a configuração no Google Cloud Console.";
       } else if (error?.message && error.message.includes("Failed to fetch")) {
