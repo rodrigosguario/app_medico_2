@@ -80,6 +80,8 @@ const CalendarPage: React.FC = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [showDayEventsDialog, setShowDayEventsDialog] = useState(false);
+  const [selectedDayEvents, setSelectedDayEvents] = useState<CalendarEvent[]>([]);
   
   const { 
     copiedEvent, 
@@ -91,6 +93,28 @@ const CalendarPage: React.FC = () => {
 
   // Aplicar atualização de status automática aos eventos
   const eventsWithUpdatedStatus = events.map(updateEventStatusBasedOnDate);
+
+  // Função para lidar com clique no dia
+  const handleDayClick = (day: Date) => {
+    setSelectedDate(day);
+    const dayEvents = getEventsForDate(day);
+    
+    if (dayEvents.length > 0) {
+      // Se há eventos, mostrar lista dos eventos do dia
+      setSelectedDayEvents(dayEvents);
+      setShowDayEventsDialog(true);
+    } else {
+      // Se não há eventos, abrir formulário de novo evento
+      const startTime = format(day, "yyyy-MM-dd'T'09:00");
+      const endTime = format(day, "yyyy-MM-dd'T'10:00");
+      setEventForm(prev => ({
+        ...prev,
+        start_time: startTime,
+        end_time: endTime
+      }));
+      setShowEventDialog(true);
+    }
+  };
 
   // Check if we should open the new event dialog based on URL params
   useEffect(() => {
@@ -497,17 +521,7 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
             !isCurrentMonth && "text-muted-foreground bg-muted/20",
             isToday && "bg-primary/10 border-primary"
           )}
-         onClick={() => {
-  setSelectedDate(currentDay);
-  const startTime = format(currentDay, "yyyy-MM-dd'T'09:00");
-  const endTime = format(currentDay, "yyyy-MM-dd'T'10:00");
-  setEventForm(prev => ({
-    ...prev,
-    start_time: startTime,
-    end_time: endTime
-  }));
-  setShowEventDialog(true);
-}}
+          onClick={() => handleDayClick(currentDay)}
          >
            <div className="font-medium text-sm mb-1 flex items-center justify-between">
              <span>{format(currentDay, 'd')}</span>
@@ -1215,6 +1229,101 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
                    </div>
                  </div>
                </form>
+             </DialogContent>
+           </Dialog>
+
+           {/* Dialog para mostrar eventos do dia */}
+           <Dialog open={showDayEventsDialog} onOpenChange={setShowDayEventsDialog}>
+             <DialogContent className="max-w-2xl">
+               <DialogHeader>
+                 <DialogTitle>
+                   Eventos de {format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
+                 </DialogTitle>
+               </DialogHeader>
+               
+               <div className="space-y-4 max-h-96 overflow-y-auto">
+                 {selectedDayEvents.map(event => (
+                   <div
+                     key={event.id}
+                     className={cn(
+                       "p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors",
+                       "border-l-4"
+                     )}
+                     style={{ borderLeftColor: getEventTypeColor(event.event_type).replace('bg-', '').replace('-500', '') }}
+                     onClick={() => {
+                       setShowDayEventsDialog(false);
+                       handleEditEvent(event);
+                     }}
+                   >
+                     <div className="flex items-start justify-between">
+                       <div className="flex-1">
+                         <h3 className="font-semibold text-lg text-foreground">{event.title}</h3>
+                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                           <div className="flex items-center gap-1">
+                             <Clock className="h-4 w-4" />
+                             {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
+                           </div>
+                           {event.location && (
+                             <div className="flex items-center gap-1">
+                               <CalendarIcon className="h-4 w-4" />
+                               {event.location}
+                             </div>
+                           )}
+                         </div>
+                         {event.description && (
+                           <p className="text-sm text-muted-foreground mt-2">{event.description}</p>
+                         )}
+                         <div className="flex items-center gap-2 mt-2">
+                           <Badge className={cn("text-xs", getStatusColor(event.status))}>
+                             {statusOptions.find(s => s.value === event.status)?.label || event.status}
+                           </Badge>
+                           <Badge variant="outline" className="text-xs">
+                             {eventTypes.find(t => t.value === event.event_type.toUpperCase())?.label || event.event_type}
+                           </Badge>
+                           {event.value && (
+                             <Badge variant="secondary" className="text-xs">
+                               R$ {event.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                             </Badge>
+                           )}
+                         </div>
+                       </div>
+                       
+                       <EventActions
+                         event={event}
+                         onEdit={handleEditEvent}
+                         onCopy={handleCopyEvent}
+                         onDelete={handleDeleteEvent}
+                         className="text-muted-foreground hover:bg-muted"
+                       />
+                     </div>
+                   </div>
+                 ))}
+               </div>
+               
+               <div className="flex justify-between pt-4 border-t">
+                 <Button
+                   variant="outline"
+                   onClick={() => {
+                     setShowDayEventsDialog(false);
+                     const startTime = format(selectedDate, "yyyy-MM-dd'T'09:00");
+                     const endTime = format(selectedDate, "yyyy-MM-dd'T'10:00");
+                     setEventForm(prev => ({
+                       ...prev,
+                       start_time: startTime,
+                       end_time: endTime
+                     }));
+                     setShowEventDialog(true);
+                   }}
+                   className="flex items-center gap-2"
+                 >
+                   <Plus className="h-4 w-4" />
+                   Adicionar Evento
+                 </Button>
+                 
+                 <Button variant="outline" onClick={() => setShowDayEventsDialog(false)}>
+                   Fechar
+                 </Button>
+               </div>
              </DialogContent>
            </Dialog>
                  </div>
