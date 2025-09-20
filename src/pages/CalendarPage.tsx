@@ -45,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { useEventActions } from '@/hooks/useEventActions';
 import { EventActions } from '@/components/EventActions';
 import { CopiedEventIndicator } from '@/components/CopiedEventIndicator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CalendarEvent {
   id: string;
@@ -90,23 +91,25 @@ const CalendarPage: React.FC = () => {
 
   // Aplicar atualização de status automática aos eventos
   const eventsWithUpdatedStatus = events.map(updateEventStatusBasedOnDate);
-// Check if we should open the new event dialog based on URL params
-  const searchParams = new URLSearchParams(location.search);
-  if (searchParams.get('action') === 'new') {
-    // Set default times when opening new event dialog
-    const now = new Date();
-    const startTime = format(now, "yyyy-MM-dd'T'09:00");
-    const endTime = format(now, "yyyy-MM-dd'T'10:00");
-    setEventForm(prev => ({
-      ...prev,
-      start_time: startTime,
-      end_time: endTime
-    }));
-    setShowEventDialog(true);
-    // Clear the URL parameter after opening the dialog
-    window.history.replaceState({}, '', location.pathname);
-  }
-}, [location.search, location.pathname]);
+
+  // Check if we should open the new event dialog based on URL params
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('action') === 'new') {
+      // Set default times when opening new event dialog
+      const now = new Date();
+      const startTime = format(now, "yyyy-MM-dd'T'09:00");
+      const endTime = format(now, "yyyy-MM-dd'T'10:00");
+      setEventForm(prev => ({
+        ...prev,
+        start_time: startTime,
+        end_time: endTime
+      }));
+      setShowEventDialog(true);
+      // Clear the URL parameter after opening the dialog
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search, location.pathname]);
 
   // Form state for event creation/editing
   const [eventForm, setEventForm] = useState({
@@ -517,7 +520,7 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
                      className="h-6 w-6 p-0 hover:bg-primary/10"
                      onClick={(e) => {
                        e.stopPropagation();
-                       handlePasteEvent(currentDay);
+                       handlePasteEvent(currentDay, createEvent, profile);
                      }}
                    >
                      <Clipboard className="h-3 w-3" />
@@ -821,14 +824,14 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <TooltipProvider>
                 <div className="space-y-6">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
-                      <p className="text-muted-foreground">Gerencie seus compromissos e plantões</p>
-                    </div>
+                   {/* Header */}
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
+                       <p className="text-muted-foreground">Gerencie seus compromissos e plantões</p>
+                     </div>
 
-            <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-2">
               <AssistantButton 
                 onClick={showAssistant}
                 variant="outline" 
@@ -1198,25 +1201,26 @@ const generateRecurringEvents = (baseEvent: any, form: typeof eventForm) => {
                     )}
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setShowEventDialog(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit" className="bg-medical hover:bg-medical-dark text-medical-foreground">
-                      {editingEvent ? 'Salvar' : 'Criar'}
-                    </Button>
-                  </div>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-              </TooltipProvider>
-            </div>
-          </main>
+                   <div className="flex gap-2">
+                     <Button 
+                       type="button" 
+                       variant="outline" 
+                       onClick={() => setShowEventDialog(false)}
+                     >
+                       Cancelar
+                     </Button>
+                     <Button type="submit" className="bg-medical hover:bg-medical-dark text-medical-foreground">
+                       {editingEvent ? 'Salvar' : 'Criar'}
+                     </Button>
+                   </div>
+                 </div>
+               </form>
+             </DialogContent>
+           </Dialog>
+                 </div>
+               </TooltipProvider>
+             </div>
+           </main>
 
         {/* AI Assistant Sidebar */}
         {isVisible && (
